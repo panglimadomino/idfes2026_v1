@@ -1,65 +1,79 @@
-import Image from "next/image";
+import Link from "next/link";
+import { getActiveEvent } from "@/lib/site-data";
 
-export default function Home() {
+export default function HomePage() {
+  const activeEvent = getActiveEvent();
+  const heroCategory = activeEvent.categories[0];
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div>
+      <section
+        className="relative min-h-[82vh] border-b border-black/20 bg-cover bg-center text-white"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(0,0,0,.68), rgba(0,0,0,.68)), url('/images/hero-surabaya-domino-2026.webp')",
+        }}
+      >
+        <div className="site-frame flex min-h-[82vh] items-center justify-center px-6 py-20 text-center">
+          <div className="max-w-3xl space-y-4">
+            <p className="text-5xl font-black leading-none sm:text-6xl">22-25 October 2026</p>
+            <h1 className="text-4xl font-black leading-tight sm:text-6xl">
+              A city that plays. A festival that celebrates.
+            </h1>
+            <p className="text-xl">Public Registration is now open.</p>
+            <p className="text-3xl font-black">{heroCategory?.name ?? "Public Registration"}</p>
+            <p className="text-3xl font-semibold">5 May 2026</p>
+            <Link
+              href="/form-pendaftaran"
+              className="mt-2 inline-flex bg-white px-10 py-4 text-2xl font-bold text-black transition hover:bg-zinc-100"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+              Register Now
+            </Link>
+            <p className="pt-4 text-2xl">Stay tuned to our official channels for more updates.</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="site-frame px-6 py-16">
+        <div className="text-center">
+          <h2 className="text-6xl font-bold text-black">Race Results</h2>
+          <div className="mt-8 flex flex-wrap justify-center gap-6">
+            {["2025", "2024", "2023"].map((year) => (
+              <button
+                key={year}
+                type="button"
+                className="min-w-36 bg-black px-8 py-6 text-4xl font-bold text-white transition hover:bg-black/80"
+              >
+                {year}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="site-frame grid gap-12 px-6 pb-20 lg:grid-cols-2">
+        <div>
+          <h2 className="text-7xl font-semibold leading-tight text-[var(--ink-strong)]">
+            Indonesia Domino Festival is not simply about games!
+          </h2>
+        </div>
+        <div className="space-y-7">
+          <p className="text-4xl leading-relaxed text-[var(--ink-soft)]">
+            It&apos;s about sparking a city-wide festivity that resonates through every sector, lighting up Indonesia in
+            the continuous spirit of #LangkahBersama.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+          <div className="aspect-video overflow-hidden bg-black">
+            <iframe
+              className="h-full w-full"
+              src="https://www.youtube.com/embed/N5B1d2BI6m8"
+              title="IDFES Teaser"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allowFullScreen
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          </div>
         </div>
-      </main>
+      </section>
     </div>
   );
 }
