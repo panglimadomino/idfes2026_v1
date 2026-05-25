@@ -25,7 +25,7 @@ export function SiteHeader() {
     <header className="sticky top-0 z-40 w-full">
       <div className="bg-black">
         <div className="site-frame flex h-12 items-center justify-between px-4 text-sm text-white sm:px-8">
-          <p className="font-medium">help@marathon.id</p>
+          <p className="font-medium">help@idfes2026.id</p>
           <div className="flex items-center gap-2">
             <span className="grid h-9 w-9 place-content-center rounded-full border border-white/70 text-xs">▲</span>
             <span className="grid h-9 w-9 place-content-center rounded-full border border-white/70 text-xs">IG</span>
@@ -38,9 +38,9 @@ export function SiteHeader() {
           <Link href="/" className="w-fit">
             <div className="flex items-center gap-3">
               <span className="grid h-10 w-10 place-content-center rounded-md border-2 border-black text-xs font-black leading-none">
-                my
+                ID
                 <br />
-                BCA
+                FES
               </span>
               <div>
                 <p className="font-title text-3xl uppercase leading-none text-black">IDFES 2026</p>

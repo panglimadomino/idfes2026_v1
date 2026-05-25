@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import { Barlow, Teko } from "next/font/google";
-import { SiteFooter } from "@/components/site-footer";
-import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
 
 const barlow = Barlow({
@@ -29,11 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" className={`${barlow.variable} ${teko.variable} h-full antialiased`}>
-      <body className="min-h-full bg-[var(--surface-base)] text-[var(--ink-strong)]">
-        <SiteHeader />
-        <main className="w-full flex-1">{children}</main>
-        <SiteFooter />
-      </body>
+      <body className="min-h-full bg-[var(--surface-base)] text-[var(--ink-strong)]">{children}</body>
     </html>
   );
 }
