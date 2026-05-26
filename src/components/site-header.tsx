@@ -79,7 +79,7 @@ export function SiteHeader() {
 
           <div className="hidden justify-end md:flex">
             <Link href="/login" className="rounded-sm bg-black px-4 py-2 text-xs font-bold text-white">
-              Aksi Masuk
+              Masuk
             </Link>
           </div>
         </div>
@@ -107,7 +107,7 @@ export function SiteHeader() {
                 onClick={() => setOpen(false)}
                 className="mt-2 w-fit rounded-sm bg-black px-4 py-2 text-xs font-bold text-white"
               >
-                Aksi Masuk
+                Masuk
               </Link>
             </div>
           </nav>
