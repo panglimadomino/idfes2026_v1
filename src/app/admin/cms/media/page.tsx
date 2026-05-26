@@ -22,10 +22,6 @@ export default async function AdminCmsMediaPage() {
     .order("created_at", { ascending: false })
     .limit(50);
 
-  if (error) {
-    throw new Error(error.message);
-  }
-
   const rows = (mediaAssets ?? []) as MediaAssetRow[];
 
   return (
@@ -34,6 +30,12 @@ export default async function AdminCmsMediaPage() {
         <h1 className="font-title text-5xl uppercase leading-none">CMS Media</h1>
         <p className="mt-2 text-sm text-[#6b7280]">Upload logo header/footer dan hero background.</p>
       </section>
+
+      {error ? (
+        <section className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          Gagal memuat data CMS media: {error.message}
+        </section>
+      ) : null}
 
       {access.isSuperAdmin ? (
         <section className="rounded-2xl border border-[#e5e7eb] bg-white p-6">

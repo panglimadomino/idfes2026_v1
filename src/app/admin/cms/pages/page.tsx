@@ -20,10 +20,6 @@ export default async function AdminCmsPagesPage() {
     .select("id, page_key, title, slug, is_published, updated_at")
     .order("updated_at", { ascending: false });
 
-  if (error) {
-    throw new Error(error.message);
-  }
-
   const rows = (pages ?? []) as CmsPageRow[];
 
   return (
@@ -32,6 +28,12 @@ export default async function AdminCmsPagesPage() {
         <h1 className="font-title text-5xl uppercase leading-none">CMS Pages</h1>
         <p className="mt-2 text-sm text-[#6b7280]">Kelola halaman public (home, event, peraturan, form, login).</p>
       </section>
+
+      {error ? (
+        <section className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          Gagal memuat data CMS pages: {error.message}
+        </section>
+      ) : null}
 
       {access.isSuperAdmin ? (
         <section className="rounded-2xl border border-[#e5e7eb] bg-white p-6">

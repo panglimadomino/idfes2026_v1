@@ -109,3 +109,51 @@ export async function uploadCmsMediaAction(formData: FormData) {
 
   revalidatePath("/admin/cms/media");
 }
+
+export async function createEventAction(formData: FormData) {
+  const access = await requireAdminAccess();
+  if (!access.isSuperAdmin) {
+    throw new Error("Hanya super admin yang dapat membuat event.");
+  }
+
+  const name = String(formData.get("name") ?? "").trim();
+  let slug = String(formData.get("slug") ?? "").trim().toLowerCase();
+  const city = String(formData.get("city") ?? "").trim();
+  const venue = String(formData.get("venue") ?? "").trim();
+  const startAt = String(formData.get("start_at") ?? "").trim();
+  const endAt = String(formData.get("end_at") ?? "").trim();
+  const status = String(formData.get("status") ?? "draft").trim();
+  const isFeatured = formData.get("is_featured") === "on";
+
+  if (!name || !slug || !startAt || !endAt) {
+    throw new Error("name, slug, start_at, dan end_at wajib diisi.");
+  }
+
+  if (!["draft", "published", "archived"].includes(status)) {
+    throw new Error("Status event tidak valid.");
+  }
+
+  slug = slug.replace(/[^a-z0-9-]/g, "-").replace(/--+/g, "-").replace(/^-|-$/g, "");
+  if (!slug) {
+    throw new Error("Slug event tidak valid.");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("events").insert({
+    name,
+    slug,
+    city: city || null,
+    venue: venue || null,
+    start_at: startAt,
+    end_at: endAt,
+    status,
+    is_featured: isFeatured,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/events");
+}
