@@ -5,11 +5,9 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 const navItems = [
-  { href: "/", label: "Home" },
-  { href: "/event", label: "Event" },
-  { href: "/peraturan", label: "Peraturan" },
-  { href: "/form-pendaftaran", label: "Form Pendaftaran" },
-  { href: "/login", label: "Login" },
+  { href: "/", label: "Beranda" },
+  { href: "/event", label: "ID Fes 2026" },
+  { href: "/berita", label: "Berita" },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -80,8 +78,8 @@ export function SiteHeader() {
           </nav>
 
           <div className="hidden justify-end md:flex">
-            <Link href="/form-pendaftaran" className="rounded-sm bg-black px-4 py-2 text-xs font-bold text-white">
-              Register Now
+            <Link href="/login" className="rounded-sm bg-black px-4 py-2 text-xs font-bold text-white">
+              Aksi Masuk
             </Link>
           </div>
         </div>
@@ -105,11 +103,11 @@ export function SiteHeader() {
                 );
               })}
               <Link
-                href="/form-pendaftaran"
+                href="/login"
                 onClick={() => setOpen(false)}
                 className="mt-2 w-fit rounded-sm bg-black px-4 py-2 text-xs font-bold text-white"
               >
-                Register Now
+                Aksi Masuk
               </Link>
             </div>
           </nav>
