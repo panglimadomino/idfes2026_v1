@@ -12,6 +12,14 @@ function normalizeDateInputForStorage(value: string) {
   return `${value}T12:00:00.000Z`;
 }
 
+function normalizeSlug(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, "-")
+    .replace(/--+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 export async function signOutAdminAction() {
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut();
@@ -307,11 +315,7 @@ export async function createEventAction(formData: FormData) {
   if (!slug) {
     slug = name;
   }
-  slug = slug
-    .toLowerCase()
-    .replace(/[^a-z0-9-]/g, "-")
-    .replace(/--+/g, "-")
-    .replace(/^-|-$/g, "");
+  slug = normalizeSlug(slug);
   if (!slug) {
     redirect("/admin/events?error=invalid_slug");
   }
@@ -427,11 +431,7 @@ export async function updateEventScheduleAction(formData: FormData) {
     redirect("/admin/events/schedule?error=invalid_status");
   }
 
-  const slug = slugInput
-    .toLowerCase()
-    .replace(/[^a-z0-9-]/g, "-")
-    .replace(/--+/g, "-")
-    .replace(/^-|-$/g, "");
+  const slug = normalizeSlug(slugInput);
 
   if (!slug) {
     redirect("/admin/events/schedule?error=invalid_slug");
@@ -468,4 +468,98 @@ export async function updateEventScheduleAction(formData: FormData) {
   revalidatePath("/event");
   revalidatePath("/events");
   redirect("/admin/events/schedule?updated=1");
+}
+
+export async function upsertEventCategoryAction(formData: FormData) {
+  const access = await requireAdminAccess();
+  const eventId = String(formData.get("event_id") ?? "").trim();
+  if (!access.isSuperAdmin) {
+    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=unauthorized`);
+  }
+
+  const categoryId = String(formData.get("category_id") ?? "").trim();
+  const name = String(formData.get("name") ?? "").trim();
+  const slugInput = String(formData.get("slug") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  const competitionStartDate = String(formData.get("competition_start_date") ?? "").trim();
+  const competitionEndDate = String(formData.get("competition_end_date") ?? "").trim();
+  const sortOrderRaw = String(formData.get("sort_order") ?? "0").trim();
+  const isPublished = formData.get("is_published") === "on";
+
+  if (!eventId || !name) {
+    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=required_fields`);
+  }
+
+  const sortOrder = Number.parseInt(sortOrderRaw || "0", 10);
+  if (Number.isNaN(sortOrder)) {
+    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=invalid_sort_order`);
+  }
+
+  const slug = normalizeSlug(slugInput || name);
+  if (!slug) {
+    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=invalid_slug`);
+  }
+
+  if (competitionStartDate && competitionEndDate && competitionEndDate < competitionStartDate) {
+    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=invalid_competition_window`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const payload = {
+    event_id: eventId,
+    name,
+    slug,
+    description: description || null,
+    competition_start_at: competitionStartDate ? normalizeDateInputForStorage(competitionStartDate) : null,
+    competition_end_at: competitionEndDate ? normalizeDateInputForStorage(competitionEndDate) : null,
+    is_published: isPublished,
+    sort_order: sortOrder,
+  };
+
+  let error: { message: string } | null = null;
+  if (categoryId) {
+    const result = await supabase.from("event_categories").update(payload).eq("id", categoryId).eq("event_id", eventId);
+    error = result.error;
+  } else {
+    const result = await supabase.from("event_categories").insert(payload);
+    error = result.error;
+  }
+
+  if (error) {
+    if (error.message.toLowerCase().includes("duplicate key")) {
+      redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=duplicate_slug`);
+    }
+    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=save_failed`);
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/events/categories");
+  revalidatePath("/event");
+  revalidatePath("/events");
+  redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&saved=1`);
+}
+
+export async function deleteEventCategoryAction(formData: FormData) {
+  const access = await requireAdminAccess();
+  const eventId = String(formData.get("event_id") ?? "").trim();
+  if (!access.isSuperAdmin) {
+    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=unauthorized`);
+  }
+
+  const categoryId = String(formData.get("category_id") ?? "").trim();
+  if (!eventId || !categoryId) {
+    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=required_fields`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("event_categories").delete().eq("id", categoryId).eq("event_id", eventId);
+  if (error) {
+    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=delete_failed`);
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/events/categories");
+  revalidatePath("/event");
+  revalidatePath("/events");
+  redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&deleted=1`);
 }

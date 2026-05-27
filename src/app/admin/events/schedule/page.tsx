@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { updateEventScheduleAction } from "@/app/admin/actions";
 import { requireAdminAccess } from "@/lib/auth/server";
 import { toDateInputValueId } from "@/lib/date-id";
@@ -154,9 +155,17 @@ export default async function AdminEventSchedulePage({ searchParams }: AdminEven
                 </label>
 
                 <div className="md:col-span-2">
-                  <button type="submit" className="rounded-lg bg-[#111827] px-4 py-2 text-sm font-semibold text-white">
-                    Simpan Perubahan
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button type="submit" className="rounded-lg bg-[#111827] px-4 py-2 text-sm font-semibold text-white">
+                      Simpan Perubahan
+                    </button>
+                    <Link
+                      href={`/admin/events/categories?event_id=${event.id}`}
+                      className="rounded-lg border border-[#d1d5db] px-4 py-2 text-sm font-semibold text-[#111827] hover:bg-[#f9fafb]"
+                    >
+                      Kelola Kategori Pertandingan
+                    </Link>
+                  </div>
                 </div>
               </form>
             </section>
