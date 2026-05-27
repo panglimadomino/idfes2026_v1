@@ -4,14 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
-const navItems = [
-  { href: "/", label: "Beranda" },
-  { href: "/event", label: "ID Fes 2026" },
+const mainNavItems = [
   { href: "/berita", label: "Berita" },
 ];
 
 type SiteHeaderProps = {
   headerLogoUrl?: string | null;
+  eventMenuItems?: { href: string; label: string }[];
 };
 
 function isActive(pathname: string, href: string) {
@@ -19,7 +18,7 @@ function isActive(pathname: string, href: string) {
   return pathname.startsWith(href);
 }
 
-export function SiteHeader({ headerLogoUrl }: SiteHeaderProps) {
+export function SiteHeader({ headerLogoUrl, eventMenuItems = [] }: SiteHeaderProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -55,7 +54,45 @@ export function SiteHeader({ headerLogoUrl }: SiteHeaderProps) {
           </button>
 
           <nav className="hidden items-center gap-2 md:flex">
-            {navItems.map((item) => {
+            <Link
+              href="/"
+              onClick={() => setOpen(false)}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                isActive(pathname, "/") ? "text-black" : "text-black/70 hover:text-black"
+              }`}
+            >
+              Beranda
+            </Link>
+
+            <div className="group relative">
+              <Link
+                href="/event"
+                onClick={() => setOpen(false)}
+                className={`inline-flex items-center gap-1 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  isActive(pathname, "/event") ? "text-black" : "text-black/70 hover:text-black"
+                }`}
+              >
+                ID Fes 2026
+                <span className="text-[10px]">▼</span>
+              </Link>
+
+              {eventMenuItems.length > 0 ? (
+                <div className="invisible absolute left-0 top-full z-20 mt-1 min-w-[220px] rounded-xl border border-black/10 bg-white p-2 opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+                  {eventMenuItems.map((item, index) => (
+                    <Link
+                      key={`${item.href}-${index}`}
+                      href={item.href}
+                      onClick={() => setOpen(false)}
+                      className="block rounded-lg px-3 py-2 text-sm font-semibold text-black/80 hover:bg-black/5 hover:text-black"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            {mainNavItems.map((item) => {
               const active = isActive(pathname, item.href);
               return (
                 <Link
@@ -82,7 +119,42 @@ export function SiteHeader({ headerLogoUrl }: SiteHeaderProps) {
         {open ? (
           <nav className="site-frame border-t border-black/10 px-4 py-3 md:hidden sm:px-8">
             <div className="flex flex-col gap-1">
-              {navItems.map((item) => {
+              <Link
+                href="/"
+                onClick={() => setOpen(false)}
+                className={`rounded-md px-3 py-2 text-sm font-semibold ${
+                  isActive(pathname, "/") ? "bg-black text-white" : "text-black/75 hover:bg-black/5 hover:text-black"
+                }`}
+              >
+                Beranda
+              </Link>
+
+              <Link
+                href="/event"
+                onClick={() => setOpen(false)}
+                className={`rounded-md px-3 py-2 text-sm font-semibold ${
+                  isActive(pathname, "/event") ? "bg-black text-white" : "text-black/75 hover:bg-black/5 hover:text-black"
+                }`}
+              >
+                ID Fes 2026
+              </Link>
+
+              {eventMenuItems.length > 0 ? (
+                <div className="ml-4 border-l border-black/10 pl-2">
+                  {eventMenuItems.map((item, index) => (
+                    <Link
+                      key={`${item.href}-mobile-${index}`}
+                      href={item.href}
+                      onClick={() => setOpen(false)}
+                      className="block rounded-md px-3 py-2 text-sm font-semibold text-black/75 hover:bg-black/5 hover:text-black"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              ) : null}
+
+              {mainNavItems.map((item) => {
                 const active = isActive(pathname, item.href);
                 return (
                   <Link
