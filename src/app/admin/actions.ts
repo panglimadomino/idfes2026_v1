@@ -114,12 +114,12 @@ export async function uploadCmsMediaAction(formData: FormData) {
 export async function deleteCmsMediaAction(formData: FormData) {
   const access = await requireAdminAccess();
   if (!access.isSuperAdmin) {
-    throw new Error("Hanya super admin yang dapat menghapus media.");
+    redirect("/admin/cms/media?error=unauthorized");
   }
 
   const mediaAssetId = String(formData.get("media_asset_id") ?? "").trim();
   if (!mediaAssetId) {
-    throw new Error("ID media tidak valid.");
+    redirect("/admin/cms/media?error=invalid_id");
   }
 
   const supabase = createSupabaseAdminClient();
@@ -131,25 +131,36 @@ export async function deleteCmsMediaAction(formData: FormData) {
     .maybeSingle();
 
   if (assetError) {
-    throw new Error(assetError.message);
+    redirect("/admin/cms/media?error=fetch_failed");
   }
 
   if (!asset) {
-    throw new Error("Media tidak ditemukan.");
+    redirect("/admin/cms/media?error=not_found");
   }
 
   const bucketId = asset.bucket_id || "cms-assets";
+
+  // Best-effort storage delete; DB row delete remains the source of truth.
   const { error: storageDeleteError } = await supabase.storage.from(bucketId).remove([asset.object_path]);
-  if (storageDeleteError && !storageDeleteError.message.toLowerCase().includes("not found")) {
-    throw new Error(storageDeleteError.message);
+  if (storageDeleteError) {
+    const rawMessage =
+      typeof storageDeleteError.message === "string"
+        ? storageDeleteError.message
+        : JSON.stringify(storageDeleteError);
+    const normalizedMessage = rawMessage.toLowerCase();
+    if (!normalizedMessage.includes("not found")) {
+      // Continue to DB delete to avoid stale rows even when storage object is already missing.
+      console.error("Storage delete warning:", rawMessage);
+    }
   }
 
   const { error: dbDeleteError } = await supabase.from("cms_media_assets").delete().eq("id", mediaAssetId);
   if (dbDeleteError) {
-    throw new Error(dbDeleteError.message);
+    redirect("/admin/cms/media?error=delete_failed");
   }
 
   revalidatePath("/admin/cms/media");
+  redirect("/admin/cms/media?deleted=1");
 }
 
 export async function createEventAction(formData: FormData) {

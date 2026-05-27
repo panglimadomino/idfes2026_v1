@@ -12,9 +12,26 @@ type MediaAssetRow = {
   created_at: string;
 };
 
-export default async function AdminCmsMediaPage() {
+type AdminCmsMediaPageProps = {
+  searchParams: Promise<{ deleted?: string; error?: string }>;
+};
+
+function getDeleteMessage(errorCode?: string) {
+  if (!errorCode) return null;
+  if (errorCode === "unauthorized") return "Akses ditolak. Hanya super_admin yang dapat menghapus media.";
+  if (errorCode === "invalid_id") return "Gagal menghapus media: ID tidak valid.";
+  if (errorCode === "not_found") return "Media tidak ditemukan. Mungkin sudah terhapus.";
+  if (errorCode === "fetch_failed") return "Gagal memuat data media untuk dihapus.";
+  if (errorCode === "delete_failed") return "Gagal menghapus data media dari database.";
+  return "Terjadi kesalahan saat menghapus media.";
+}
+
+export default async function AdminCmsMediaPage({ searchParams }: AdminCmsMediaPageProps) {
+  const params = await searchParams;
   const access = await requireAdminAccess();
   const supabase = await createSupabaseServerClient();
+  const deleteErrorMessage = getDeleteMessage(params.error);
+  const showDeleteSuccess = params.deleted === "1";
 
   const { data: mediaAssets, error } = await supabase
     .from("cms_media_assets")
@@ -35,6 +52,16 @@ export default async function AdminCmsMediaPage() {
         <section className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           Gagal memuat data CMS media: {error.message}
         </section>
+      ) : null}
+
+      {showDeleteSuccess ? (
+        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
+          Media berhasil dihapus.
+        </section>
+      ) : null}
+
+      {deleteErrorMessage ? (
+        <section className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{deleteErrorMessage}</section>
       ) : null}
 
       {access.isSuperAdmin ? (

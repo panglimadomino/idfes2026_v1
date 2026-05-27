@@ -26,23 +26,19 @@ export function SiteHeader({ headerLogoUrl }: SiteHeaderProps) {
   return (
     <header className="sticky top-0 z-40 w-full">
       <div className="border-b border-black/10 bg-white/95 backdrop-blur">
-        <div className="site-frame grid grid-cols-[1fr_auto] items-center gap-4 px-4 py-4 sm:px-8 md:grid-cols-[1fr_auto_1fr]">
+        <div className="site-frame grid min-h-16 grid-cols-[1fr_auto] items-center gap-4 px-4 py-2 sm:px-8 md:grid-cols-[1fr_auto_1fr]">
           <Link href="/" className="w-fit">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center">
               {headerLogoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={headerLogoUrl} alt="IDFES logo" className="h-10 w-auto object-contain" />
+                <img src={headerLogoUrl} alt="IDFES logo" className="h-12 w-auto object-contain sm:h-14 md:h-16" />
               ) : (
-                <span className="grid h-10 w-10 place-content-center rounded-md border-2 border-black text-xs font-black leading-none">
+                <span className="grid h-12 w-12 place-content-center rounded-md border-2 border-black text-xs font-black leading-none sm:h-14 sm:w-14 md:h-16 md:w-16">
                   ID
                   <br />
                   FES
                 </span>
               )}
-              <div>
-                <p className="font-title text-3xl uppercase leading-none text-black">IDFES 2026</p>
-                <p className="text-xs font-semibold uppercase tracking-wide text-black/70">Indonesia Domino Festival</p>
-              </div>
             </div>
           </Link>
 
