@@ -122,41 +122,38 @@ export async function deleteCmsMediaAction(formData: FormData) {
     redirect("/admin/cms/media?error=invalid_id");
   }
 
-  const supabase = createSupabaseAdminClient();
+  const supabase = await createSupabaseServerClient();
 
-  const { data: asset, error: assetError } = await supabase
+  const { data: deletedAsset, error: dbDeleteError } = await supabase
     .from("cms_media_assets")
-    .select("id, bucket_id, object_path")
+    .delete()
     .eq("id", mediaAssetId)
+    .select("bucket_id, object_path")
     .maybeSingle();
 
-  if (assetError) {
-    redirect("/admin/cms/media?error=fetch_failed");
+  if (dbDeleteError) {
+    redirect("/admin/cms/media?error=delete_failed");
   }
 
-  if (!asset) {
+  if (!deletedAsset) {
     redirect("/admin/cms/media?error=not_found");
   }
 
-  const bucketId = asset.bucket_id || "cms-assets";
-
-  // Best-effort storage delete; DB row delete remains the source of truth.
-  const { error: storageDeleteError } = await supabase.storage.from(bucketId).remove([asset.object_path]);
-  if (storageDeleteError) {
-    const rawMessage =
-      typeof storageDeleteError.message === "string"
-        ? storageDeleteError.message
-        : JSON.stringify(storageDeleteError);
-    const normalizedMessage = rawMessage.toLowerCase();
-    if (!normalizedMessage.includes("not found")) {
-      // Continue to DB delete to avoid stale rows even when storage object is already missing.
-      console.error("Storage delete warning:", rawMessage);
+  const bucketId = deletedAsset.bucket_id || "cms-assets";
+  const objectPath = deletedAsset.object_path;
+  if (objectPath) {
+    // Best-effort: if storage delete fails, DB state is still consistent.
+    const { error: storageDeleteError } = await supabase.storage.from(bucketId).remove([objectPath]);
+    if (storageDeleteError) {
+      const rawMessage =
+        typeof storageDeleteError.message === "string"
+          ? storageDeleteError.message
+          : JSON.stringify(storageDeleteError);
+      const normalizedMessage = rawMessage.toLowerCase();
+      if (!normalizedMessage.includes("not found")) {
+        console.error("Storage delete warning:", rawMessage);
+      }
     }
-  }
-
-  const { error: dbDeleteError } = await supabase.from("cms_media_assets").delete().eq("id", mediaAssetId);
-  if (dbDeleteError) {
-    redirect("/admin/cms/media?error=delete_failed");
   }
 
   revalidatePath("/admin/cms/media");
