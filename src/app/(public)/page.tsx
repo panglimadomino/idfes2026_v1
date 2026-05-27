@@ -1,9 +1,15 @@
 import Link from "next/link";
 import { getActiveEvent } from "@/lib/site-data";
+import { extractProvinceLabel, getPublishedEvents } from "@/lib/public-events";
 
-export default function HomePage() {
+function formatDate(value: string) {
+  return new Date(value).toLocaleDateString("id-ID");
+}
+
+export default async function HomePage() {
   const activeEvent = getActiveEvent();
   const heroCategory = activeEvent.categories[0];
+  const publishedEvents = await getPublishedEvents(8);
 
   return (
     <div>
@@ -32,6 +38,50 @@ export default function HomePage() {
             <p className="pt-4 text-2xl">Stay tuned to our official channels for more updates.</p>
           </div>
         </div>
+      </section>
+
+      <section id="id-fes-2026" className="site-frame px-6 py-16">
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="font-title text-5xl uppercase leading-none text-[var(--ink-strong)]">ID Fes 2026</h2>
+            <p className="mt-2 text-sm text-[var(--ink-soft)]">Roadshow event per provinsi. Geser untuk melihat hingga 8 event.</p>
+          </div>
+          <Link href="/event" className="rounded-full bg-black px-5 py-2 text-sm font-bold text-white hover:bg-black/85">
+            Lihat Semua
+          </Link>
+        </div>
+
+        {publishedEvents.length > 0 ? (
+          <div className="grid auto-cols-[85%] grid-flow-col gap-4 overflow-x-auto pb-3 md:auto-cols-[calc((100%-1rem)/2)]">
+            {publishedEvents.map((event) => (
+              <article
+                key={event.id}
+                className="snap-start rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-5 shadow-sm"
+              >
+                <p className="text-xs font-bold uppercase tracking-wide text-[var(--ink-soft)]">
+                  {extractProvinceLabel(event.city, event.name)}
+                </p>
+                <h3 className="mt-2 text-2xl font-bold text-[var(--ink-strong)]">{event.name}</h3>
+                <p className="mt-2 text-sm text-[var(--ink-soft)]">
+                  {formatDate(event.start_at)} - {formatDate(event.end_at)}
+                </p>
+                <p className="mt-1 text-sm text-[var(--ink-soft)]">{event.city ?? "-"}</p>
+                <div className="mt-4">
+                  <Link
+                    href={`/events/${event.slug}`}
+                    className="inline-flex rounded-full border border-black px-4 py-2 text-sm font-semibold text-black hover:bg-black hover:text-white"
+                  >
+                    Buka Event
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-5 text-sm text-[var(--ink-soft)]">
+            Belum ada event published.
+          </div>
+        )}
       </section>
 
       <section className="site-frame px-6 py-16">

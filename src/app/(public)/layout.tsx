@@ -1,20 +1,7 @@
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { createSupabaseClient } from "@/lib/supabase/client";
-
-type EventMenuItem = {
-  href: string;
-  label: string;
-};
-
-function extractProvinceLabel(city: string | null, fallback: string) {
-  if (!city) return fallback;
-  const parts = city
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean);
-  return parts[parts.length - 1] || fallback;
-}
+import { getPublishedEventMenuItems } from "@/lib/public-events";
 
 async function getHeaderLogoUrl() {
   try {
@@ -35,31 +22,6 @@ async function getHeaderLogoUrl() {
     return data?.public_url ?? null;
   } catch {
     return null;
-  }
-}
-
-async function getPublishedEventMenuItems(): Promise<EventMenuItem[]> {
-  try {
-    const supabase = createSupabaseClient();
-    const { data, error } = await supabase
-      .from("events")
-      .select("slug, city, name, start_at")
-      .eq("status", "published")
-      .order("start_at", { ascending: false })
-      .limit(50);
-
-    if (error || !data) {
-      return [];
-    }
-
-    return data
-      .map((event) => ({
-        href: `/events/${event.slug}`,
-        label: extractProvinceLabel(event.city, event.name),
-      }))
-      .filter((item) => Boolean(item.href) && Boolean(item.label));
-  } catch {
-    return [];
   }
 }
 

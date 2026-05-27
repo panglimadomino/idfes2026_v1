@@ -66,10 +66,12 @@ export function SiteHeader({ headerLogoUrl, eventMenuItems = [] }: SiteHeaderPro
 
             <div className="group relative">
               <Link
-                href="/event"
+                href="/#id-fes-2026"
                 onClick={() => setOpen(false)}
                 className={`inline-flex items-center gap-1 rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  isActive(pathname, "/event") ? "text-black" : "text-black/70 hover:text-black"
+                  pathname === "/" || isActive(pathname, "/event") || isActive(pathname, "/events")
+                    ? "text-black"
+                    : "text-black/70 hover:text-black"
                 }`}
               >
                 ID Fes 2026
@@ -130,10 +132,12 @@ export function SiteHeader({ headerLogoUrl, eventMenuItems = [] }: SiteHeaderPro
               </Link>
 
               <Link
-                href="/event"
+                href="/#id-fes-2026"
                 onClick={() => setOpen(false)}
                 className={`rounded-md px-3 py-2 text-sm font-semibold ${
-                  isActive(pathname, "/event") ? "bg-black text-white" : "text-black/75 hover:bg-black/5 hover:text-black"
+                  pathname === "/" || isActive(pathname, "/event") || isActive(pathname, "/events")
+                    ? "bg-black text-white"
+                    : "text-black/75 hover:bg-black/5 hover:text-black"
                 }`}
               >
                 ID Fes 2026
