@@ -15,6 +15,7 @@ export type AdminSidebarSection = {
 
 type AdminSidebarNavProps = {
   sections: AdminSidebarSection[];
+  onItemClick?: () => void;
 };
 
 function isPathActive(pathname: string, href: string) {
@@ -25,7 +26,7 @@ function isPathActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function AdminSidebarNav({ sections }: AdminSidebarNavProps) {
+export function AdminSidebarNav({ sections, onItemClick }: AdminSidebarNavProps) {
   const pathname = usePathname();
 
   return (
@@ -41,6 +42,7 @@ export function AdminSidebarNav({ sections }: AdminSidebarNavProps) {
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={onItemClick}
                   className={`block rounded-lg px-3 py-2 text-sm font-semibold transition ${
                     active ? "bg-[#111827] text-white" : "text-[#111827] hover:bg-[#f3f4f6]"
                   }`}
