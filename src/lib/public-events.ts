@@ -22,6 +22,7 @@ export type PublicEventCategory = {
   id: string;
   name: string;
   slug: string;
+  sort_order: number | null;
   description: string | null;
   age_group: string | null;
   gender_category: string | null;
@@ -142,7 +143,7 @@ export async function getPublishedCategoriesByEventId(eventId: string): Promise<
     const { data, error } = await supabase
       .from("event_categories")
       .select(
-        "id, name, slug, description, age_group, gender_category, participant_count, participant_unit, registration_open_at, registration_close_at, competition_start_at, competition_end_at, pairing_zone_count, pairing_cluster_count, pairing_group_count, pairing_table_count, prize_breakdown",
+        "id, name, slug, sort_order, description, age_group, gender_category, participant_count, participant_unit, registration_open_at, registration_close_at, competition_start_at, competition_end_at, pairing_zone_count, pairing_cluster_count, pairing_group_count, pairing_table_count, prize_breakdown",
       )
       .eq("event_id", eventId)
       .eq("is_published", true)
@@ -154,6 +155,7 @@ export async function getPublishedCategoriesByEventId(eventId: string): Promise<
       id: String(item.id ?? ""),
       name: String(item.name ?? ""),
       slug: String(item.slug ?? ""),
+      sort_order: typeof item.sort_order === "number" ? item.sort_order : null,
       description: typeof item.description === "string" ? item.description : null,
       age_group: typeof item.age_group === "string" ? item.age_group : null,
       gender_category: typeof item.gender_category === "string" ? item.gender_category : null,

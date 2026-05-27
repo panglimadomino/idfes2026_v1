@@ -30,6 +30,18 @@ function formatRupiah(value: number) {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(value);
 }
 
+function parseCategoryIdentityLabel(categoryName: string) {
+  const parts = categoryName
+    .split(" - ")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return {
+    noPertandingan: parts[0] ?? categoryName,
+    batasUsia: parts[1] ?? "-",
+    jenisKelamin: parts[2] ?? "-",
+  };
+}
+
 export default async function EventDetailPage({ params }: Props) {
   const { eventSlug } = await params;
   const event = await getPublishedEventBySlug(eventSlug);
@@ -57,54 +69,103 @@ export default async function EventDetailPage({ params }: Props) {
         </div>
         {categories.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {categories.map((category) => (
-              <article key={category.id} className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-5">
-                <h3 className="text-xl font-bold text-[var(--ink-strong)]">{category.name}</h3>
-                <p className="mt-2 text-sm text-[var(--ink-soft)]">{category.description ?? "Kategori event."}</p>
-                <dl className="mt-3 space-y-1 text-sm text-[var(--ink-soft)]">
-                  <div className="flex justify-between gap-2">
-                    <dt>Identitas</dt>
-                    <dd>{category.age_group ?? "-"} | {category.gender_category ?? "-"}</dd>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <dt>Jumlah Peserta</dt>
-                    <dd>{formatParticipant(category)}</dd>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <dt>Pendaftaran</dt>
-                    <dd>{formatWindow(category.registration_open_at, category.registration_close_at)}</dd>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <dt>Pertandingan</dt>
-                    <dd>{formatWindow(category.competition_start_at, category.competition_end_at)}</dd>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <dt>Pairing</dt>
-                    <dd>
-                      Z{category.pairing_zone_count ?? 0} C{category.pairing_cluster_count ?? 0} G{category.pairing_group_count ?? 0} M{category.pairing_table_count ?? 0}
-                    </dd>
-                  </div>
-                  {category.prize_breakdown.length > 0 ? (
+            {categories.map((category) => {
+              const identity = parseCategoryIdentityLabel(category.name);
+              return (
+                <article key={category.id} className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-5">
+                  <h3 className="text-xl font-bold text-[var(--ink-strong)]">{category.name}</h3>
+                  <p className="mt-2 text-sm text-[var(--ink-soft)]">{category.description ?? "Kategori event."}</p>
+                  <dl className="mt-3 space-y-1 text-sm text-[var(--ink-soft)]">
                     <div className="flex justify-between gap-2">
-                      <dt>Total Pos Hadiah</dt>
-                      <dd>{category.prize_breakdown.length} juara</dd>
+                      <dt>No Pertandingan</dt>
+                      <dd>{identity.noPertandingan}</dd>
                     </div>
-                  ) : null}
-                  {category.prize_breakdown[0] ? (
                     <div className="flex justify-between gap-2">
-                      <dt>{category.prize_breakdown[0].label}</dt>
-                      <dd>{formatRupiah(category.prize_breakdown[0].amount)}</dd>
+                      <dt>Batas Usia</dt>
+                      <dd>{category.age_group ?? identity.batasUsia}</dd>
                     </div>
-                  ) : null}
-                </dl>
-                <Link
-                  href={`/events/${event.slug}/categories/${category.slug}`}
-                  className="mt-4 inline-flex rounded-full bg-[var(--ink-strong)] px-4 py-2 text-sm font-bold text-[var(--surface-card)]"
-                >
-                  Buka Detail Kategori
-                </Link>
-              </article>
-            ))}
+                    <div className="flex justify-between gap-2">
+                      <dt>Jenis Kelamin</dt>
+                      <dd>{category.gender_category ?? identity.jenisKelamin}</dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt>Slug</dt>
+                      <dd>{category.slug}</dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt>Label Kategori</dt>
+                      <dd>{category.name}</dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt>Jumlah Peserta</dt>
+                      <dd>{formatParticipant(category)}</dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt>Mulai Pendaftaran</dt>
+                      <dd>{category.registration_open_at ? formatDateId(category.registration_open_at) : "-"}</dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt>Selesai Pendaftaran</dt>
+                      <dd>{category.registration_close_at ? formatDateId(category.registration_close_at) : "-"}</dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt>Mulai Pertandingan</dt>
+                      <dd>{category.competition_start_at ? formatDateId(category.competition_start_at) : "-"}</dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt>Selesai Pertandingan</dt>
+                      <dd>{category.competition_end_at ? formatDateId(category.competition_end_at) : "-"}</dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt>Periode Pendaftaran</dt>
+                      <dd>{formatWindow(category.registration_open_at, category.registration_close_at)}</dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt>Periode Pertandingan</dt>
+                      <dd>{formatWindow(category.competition_start_at, category.competition_end_at)}</dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt>Jumlah Zona</dt>
+                      <dd>{category.pairing_zone_count ?? 0}</dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt>Jumlah Cluster</dt>
+                      <dd>{category.pairing_cluster_count ?? 0}</dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt>Jumlah Group</dt>
+                      <dd>{category.pairing_group_count ?? 0}</dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt>Jumlah Meja</dt>
+                      <dd>{category.pairing_table_count ?? 0}</dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt>Sort Order</dt>
+                      <dd>{category.sort_order ?? "-"}</dd>
+                    </div>
+                    {category.prize_breakdown.length > 0 ? (
+                      <div className="flex justify-between gap-2">
+                        <dt>Total Pos Hadiah</dt>
+                        <dd>{category.prize_breakdown.length} juara</dd>
+                      </div>
+                    ) : null}
+                    {category.prize_breakdown.map((prize) => (
+                      <div key={prize.label} className="flex justify-between gap-2">
+                        <dt>{prize.label}</dt>
+                        <dd>{formatRupiah(prize.amount)}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <Link
+                    href={`/events/${event.slug}/categories/${category.slug}`}
+                    className="mt-4 inline-flex rounded-full bg-[var(--ink-strong)] px-4 py-2 text-sm font-bold text-[var(--surface-card)]"
+                  >
+                    Buka Detail Kategori
+                  </Link>
+                </article>
+              );
+            })}
           </div>
         ) : (
           <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-5 text-sm text-[var(--ink-soft)]">
