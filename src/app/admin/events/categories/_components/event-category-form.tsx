@@ -73,6 +73,9 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
   const [ageGroup, setAgeGroup] = useState(initialAgeGroup);
   const [genderCategory, setGenderCategory] = useState(initialGenderCategory);
   const [slug, setSlug] = useState(defaults.slug || toSlug(initialMatchName));
+  const [participantCount, setParticipantCount] = useState(
+    defaults.participantCount !== null && defaults.participantCount !== undefined ? String(defaults.participantCount) : "",
+  );
   const [visibleOptionalPrizeCount, setVisibleOptionalPrizeCount] = useState(() => {
     let count = 0;
     for (const label of OPTIONAL_PRIZE_LABELS) {
@@ -122,7 +125,6 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
       <input type="hidden" name="slug" value={slug} />
       <input type="hidden" name="age_group" value={ageGroup} />
       <input type="hidden" name="gender_category" value={genderCategory} />
-      <input type="hidden" name="participant_count" value={String(defaults.participantCount ?? 1)} />
       <input type="hidden" name="participant_unit" value={defaults.participantUnit || "peserta"} />
       <input type="hidden" name="prize_breakdown_json" value={serializedPrizeBreakdown} />
 
@@ -195,6 +197,20 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
           readOnly
           value={categoryName}
           className="mt-1 w-full rounded-lg border border-[#d1d5db] bg-[#f9fafb] px-3 py-2 text-[#6b7280]"
+        />
+      </label>
+
+      <label className="text-sm font-semibold text-[#374151]">
+        Jumlah Peserta
+        <input
+          required
+          name="participant_count"
+          type="number"
+          min={1}
+          value={participantCount}
+          onChange={(event) => setParticipantCount(event.target.value)}
+          placeholder="Masukkan jumlah peserta"
+          className="mt-1 w-full rounded-lg border border-[#d1d5db] px-3 py-2"
         />
       </label>
 
