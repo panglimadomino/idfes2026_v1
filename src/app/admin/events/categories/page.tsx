@@ -3,6 +3,7 @@ import { deleteEventCategoryAction, upsertEventCategoryAction } from "@/app/admi
 import { requireAdminAccess } from "@/lib/auth/server";
 import { toDateInputValueId } from "@/lib/date-id";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { EventCategoryForm } from "./_components/event-category-form";
 
 type EventRow = {
   id: string;
@@ -15,8 +16,17 @@ type EventCategoryRow = {
   name: string;
   slug: string;
   description: string | null;
+  registration_open_at: string | null;
+  registration_close_at: string | null;
   competition_start_at: string | null;
   competition_end_at: string | null;
+  participant_count: number | null;
+  participant_unit: string | null;
+  pairing_zone_count: number | null;
+  pairing_cluster_count: number | null;
+  pairing_group_count: number | null;
+  pairing_table_count: number | null;
+  prize_breakdown: unknown;
   is_published: boolean;
   sort_order: number;
 };
@@ -32,7 +42,12 @@ function getErrorMessage(errorCode?: string) {
   if (errorCode === "invalid_slug") return "Slug kategori tidak valid.";
   if (errorCode === "duplicate_slug") return "Slug kategori sudah dipakai di event ini.";
   if (errorCode === "invalid_sort_order") return "Sort order harus berupa angka.";
+  if (errorCode === "invalid_participant_count") return "Jumlah peserta harus lebih dari 0.";
+  if (errorCode === "invalid_pairing_config") return "Nilai pairing tidak valid. Gunakan angka 0 atau lebih.";
+  if (errorCode === "invalid_prize_config") return "Konfigurasi hadiah tidak valid.";
+  if (errorCode === "invalid_registration_window") return "Tanggal selesai pendaftaran tidak boleh lebih awal dari tanggal mulai pendaftaran.";
   if (errorCode === "invalid_competition_window") return "Tanggal selesai pertandingan tidak boleh lebih awal dari tanggal mulai.";
+  if (errorCode === "schema_not_ready") return "Schema database belum siap. Jalankan SQL 016 terlebih dahulu di Supabase.";
   if (errorCode === "save_failed") return "Gagal menyimpan kategori pertandingan.";
   if (errorCode === "delete_failed") return "Gagal menghapus kategori pertandingan.";
   return "Terjadi kesalahan pada pengelolaan kategori pertandingan.";
@@ -65,7 +80,9 @@ export default async function AdminEventCategoriesPage({ searchParams }: AdminEv
   if (selectedEventId) {
     const { data, error } = await supabase
       .from("event_categories")
-      .select("id, name, slug, description, competition_start_at, competition_end_at, is_published, sort_order")
+      .select(
+        "id, name, slug, description, registration_open_at, registration_close_at, competition_start_at, competition_end_at, participant_count, participant_unit, pairing_zone_count, pairing_cluster_count, pairing_group_count, pairing_table_count, prize_breakdown, is_published, sort_order",
+      )
       .eq("event_id", selectedEventId)
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true });
@@ -140,61 +157,31 @@ export default async function AdminEventCategoriesPage({ searchParams }: AdminEv
       {selectedEventId && access.isSuperAdmin ? (
         <section className="rounded-2xl border border-[#e5e7eb] bg-white p-6">
           <h2 className="text-lg font-bold">Tambah Kategori Baru</h2>
-          <form action={upsertEventCategoryAction} className="mt-4 grid gap-3 md:grid-cols-2">
-            <input type="hidden" name="event_id" value={selectedEventId} />
-
-            <label className="text-sm font-semibold text-[#374151]">
-              Nama Kategori
-              <input required name="name" placeholder="Contoh: Tunggal Putra" className="mt-1 w-full rounded-lg border border-[#d1d5db] px-3 py-2" />
-            </label>
-
-            <label className="text-sm font-semibold text-[#374151]">
-              Slug (opsional)
-              <input name="slug" placeholder="contoh: tunggal-putra" className="mt-1 w-full rounded-lg border border-[#d1d5db] px-3 py-2" />
-            </label>
-
-            <label className="text-sm font-semibold text-[#374151] md:col-span-2">
-              Deskripsi
-              <textarea
-                name="description"
-                rows={3}
-                placeholder="Deskripsi singkat kategori pertandingan"
-                className="mt-1 w-full rounded-lg border border-[#d1d5db] px-3 py-2"
-              />
-            </label>
-
-            <label className="text-sm font-semibold text-[#374151]">
-              Tanggal Mulai Pertandingan
-              <input name="competition_start_date" type="date" className="mt-1 w-full rounded-lg border border-[#d1d5db] px-3 py-2" />
-            </label>
-
-            <label className="text-sm font-semibold text-[#374151]">
-              Tanggal Selesai Pertandingan
-              <input name="competition_end_date" type="date" className="mt-1 w-full rounded-lg border border-[#d1d5db] px-3 py-2" />
-            </label>
-
-            <label className="text-sm font-semibold text-[#374151]">
-              Sort Order
-              <input
-                name="sort_order"
-                type="number"
-                min={0}
-                defaultValue={categories.length > 0 ? Math.max(...categories.map((item) => item.sort_order)) + 10 : 10}
-                className="mt-1 w-full rounded-lg border border-[#d1d5db] px-3 py-2"
-              />
-            </label>
-
-            <label className="flex items-center gap-2 rounded-lg border border-[#d1d5db] px-3 py-2 text-sm md:mt-7">
-              <input type="checkbox" name="is_published" defaultChecked />
-              Publish kategori ini
-            </label>
-
-            <div className="md:col-span-2">
-              <button type="submit" className="rounded-lg bg-[#111827] px-4 py-2 text-sm font-semibold text-white">
-                Simpan Kategori
-              </button>
-            </div>
-          </form>
+          <div className="mt-4">
+            <EventCategoryForm
+              action={upsertEventCategoryAction}
+              eventId={selectedEventId}
+              submitLabel="Simpan Kategori"
+              defaults={{
+                noPertandingan: "Ganda Open Tournament",
+                slug: "ganda-open-tournament",
+                description: "",
+                participantCount: null,
+                participantUnit: "pasang",
+                competitionStartDate: "",
+                competitionEndDate: "",
+                registrationOpenDate: "",
+                registrationCloseDate: "",
+                pairingZoneCount: 0,
+                pairingClusterCount: 0,
+                pairingGroupCount: 0,
+                pairingTableCount: 0,
+                sortOrder: categories.length > 0 ? Math.max(...categories.map((item) => item.sort_order)) + 10 : 10,
+                isPublished: true,
+                prizes: [],
+              }}
+            />
+          </div>
         </section>
       ) : null}
 
@@ -208,72 +195,40 @@ export default async function AdminEventCategoriesPage({ searchParams }: AdminEv
         <section className="space-y-4">
           {categories.map((category) => (
             <article key={category.id} className="rounded-2xl border border-[#e5e7eb] bg-white p-6">
-              <form action={upsertEventCategoryAction} className="grid gap-3 md:grid-cols-2">
-                <input type="hidden" name="event_id" value={selectedEventId} />
-                <input type="hidden" name="category_id" value={category.id} />
-
-                <label className="text-sm font-semibold text-[#374151]">
-                  Nama Kategori
-                  <input required name="name" defaultValue={category.name} className="mt-1 w-full rounded-lg border border-[#d1d5db] px-3 py-2" />
-                </label>
-
-                <label className="text-sm font-semibold text-[#374151]">
-                  Slug
-                  <input required name="slug" defaultValue={category.slug} className="mt-1 w-full rounded-lg border border-[#d1d5db] px-3 py-2" />
-                </label>
-
-                <label className="text-sm font-semibold text-[#374151] md:col-span-2">
-                  Deskripsi
-                  <textarea name="description" rows={3} defaultValue={category.description ?? ""} className="mt-1 w-full rounded-lg border border-[#d1d5db] px-3 py-2" />
-                </label>
-
-                <label className="text-sm font-semibold text-[#374151]">
-                  Tanggal Mulai Pertandingan
-                  <input
-                    name="competition_start_date"
-                    type="date"
-                    defaultValue={category.competition_start_at ? toDateInputValueId(category.competition_start_at) : ""}
-                    className="mt-1 w-full rounded-lg border border-[#d1d5db] px-3 py-2"
-                  />
-                </label>
-
-                <label className="text-sm font-semibold text-[#374151]">
-                  Tanggal Selesai Pertandingan
-                  <input
-                    name="competition_end_date"
-                    type="date"
-                    defaultValue={category.competition_end_at ? toDateInputValueId(category.competition_end_at) : ""}
-                    className="mt-1 w-full rounded-lg border border-[#d1d5db] px-3 py-2"
-                  />
-                </label>
-
-                <label className="text-sm font-semibold text-[#374151]">
-                  Sort Order
-                  <input
-                    name="sort_order"
-                    type="number"
-                    min={0}
-                    defaultValue={category.sort_order}
-                    className="mt-1 w-full rounded-lg border border-[#d1d5db] px-3 py-2"
-                  />
-                </label>
-
-                <label className="flex items-center gap-2 rounded-lg border border-[#d1d5db] px-3 py-2 text-sm md:mt-7">
-                  <input type="checkbox" name="is_published" defaultChecked={category.is_published} />
-                  Publish kategori ini
-                </label>
-
-                <div className="flex flex-wrap gap-2 md:col-span-2">
-                  <button
-                    type="submit"
-                    disabled={!access.isSuperAdmin}
-                    className="rounded-lg bg-[#111827] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Simpan Perubahan
-                  </button>
-                </div>
-              </form>
-
+              <EventCategoryForm
+                action={upsertEventCategoryAction}
+                eventId={selectedEventId}
+                submitLabel="Simpan Perubahan"
+                isEdit
+                defaults={{
+                  categoryId: category.id,
+                  noPertandingan: category.name,
+                  slug: category.slug,
+                  description: category.description ?? "",
+                  participantCount: category.participant_count,
+                  participantUnit: category.participant_unit ?? "",
+                  competitionStartDate: category.competition_start_at ? toDateInputValueId(category.competition_start_at) : "",
+                  competitionEndDate: category.competition_end_at ? toDateInputValueId(category.competition_end_at) : "",
+                  registrationOpenDate: category.registration_open_at ? toDateInputValueId(category.registration_open_at) : "",
+                  registrationCloseDate: category.registration_close_at ? toDateInputValueId(category.registration_close_at) : "",
+                  pairingZoneCount: category.pairing_zone_count ?? 0,
+                  pairingClusterCount: category.pairing_cluster_count ?? 0,
+                  pairingGroupCount: category.pairing_group_count ?? 0,
+                  pairingTableCount: category.pairing_table_count ?? 0,
+                  sortOrder: category.sort_order,
+                  isPublished: category.is_published,
+                  prizes: Array.isArray(category.prize_breakdown)
+                    ? (category.prize_breakdown as Array<{ label?: unknown; amount?: unknown }>)
+                        .map((item) => {
+                          const label = typeof item.label === "string" ? item.label : "";
+                          const amount = Number(item.amount);
+                          if (!label || !Number.isFinite(amount)) return null;
+                          return { label, amount };
+                        })
+                        .filter((item): item is { label: string; amount: number } => item !== null)
+                    : [],
+                }}
+              />
               {access.isSuperAdmin ? (
                 <form action={deleteEventCategoryAction} className="mt-3">
                   <input type="hidden" name="event_id" value={selectedEventId} />

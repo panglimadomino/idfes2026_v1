@@ -481,12 +481,21 @@ export async function upsertEventCategoryAction(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const slugInput = String(formData.get("slug") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const participantCountRaw = String(formData.get("participant_count") ?? "").trim();
+  const participantUnitRaw = String(formData.get("participant_unit") ?? "").trim().toLowerCase();
+  const registrationOpenDate = String(formData.get("registration_open_date") ?? "").trim();
+  const registrationCloseDate = String(formData.get("registration_close_date") ?? "").trim();
   const competitionStartDate = String(formData.get("competition_start_date") ?? "").trim();
   const competitionEndDate = String(formData.get("competition_end_date") ?? "").trim();
+  const pairingZoneCountRaw = String(formData.get("pairing_zone_count") ?? "0").trim();
+  const pairingClusterCountRaw = String(formData.get("pairing_cluster_count") ?? "0").trim();
+  const pairingGroupCountRaw = String(formData.get("pairing_group_count") ?? "0").trim();
+  const pairingTableCountRaw = String(formData.get("pairing_table_count") ?? "0").trim();
+  const prizeBreakdownRaw = String(formData.get("prize_breakdown_json") ?? "[]").trim();
   const sortOrderRaw = String(formData.get("sort_order") ?? "0").trim();
   const isPublished = formData.get("is_published") === "on";
 
-  if (!eventId || !name) {
+  if (!eventId || !name || !competitionStartDate || !competitionEndDate || !participantCountRaw) {
     redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=required_fields`);
   }
 
@@ -494,14 +503,54 @@ export async function upsertEventCategoryAction(formData: FormData) {
   if (Number.isNaN(sortOrder)) {
     redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=invalid_sort_order`);
   }
+  const participantCount = Number.parseInt(participantCountRaw || "0", 10);
+  if (Number.isNaN(participantCount) || participantCount <= 0) {
+    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=invalid_participant_count`);
+  }
+
+  const allowedParticipantUnits = new Set(["pasang", "athlet", "peserta"]);
+  const participantUnit = allowedParticipantUnits.has(participantUnitRaw) ? participantUnitRaw : "peserta";
+
+  const pairingZoneCount = Number.parseInt(pairingZoneCountRaw || "0", 10);
+  const pairingClusterCount = Number.parseInt(pairingClusterCountRaw || "0", 10);
+  const pairingGroupCount = Number.parseInt(pairingGroupCountRaw || "0", 10);
+  const pairingTableCount = Number.parseInt(pairingTableCountRaw || "0", 10);
+  if (
+    [pairingZoneCount, pairingClusterCount, pairingGroupCount, pairingTableCount].some(
+      (value) => Number.isNaN(value) || value < 0,
+    )
+  ) {
+    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=invalid_pairing_config`);
+  }
 
   const slug = normalizeSlug(slugInput || name);
   if (!slug) {
     redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=invalid_slug`);
   }
 
+  if (registrationOpenDate && registrationCloseDate && registrationCloseDate < registrationOpenDate) {
+    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=invalid_registration_window`);
+  }
+
   if (competitionStartDate && competitionEndDate && competitionEndDate < competitionStartDate) {
     redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=invalid_competition_window`);
+  }
+
+  let prizeBreakdown: Array<{ label: string; amount: number }> = [];
+  try {
+    const parsed = JSON.parse(prizeBreakdownRaw) as Array<{ label?: unknown; amount?: unknown }>;
+    if (Array.isArray(parsed)) {
+      prizeBreakdown = parsed
+        .map((item) => {
+          const label = typeof item.label === "string" ? item.label.trim() : "";
+          const amount = Number(item.amount);
+          if (!label || !Number.isFinite(amount) || amount <= 0) return null;
+          return { label, amount: Math.trunc(amount) };
+        })
+        .filter((item): item is { label: string; amount: number } => item !== null);
+    }
+  } catch {
+    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=invalid_prize_config`);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -510,8 +559,17 @@ export async function upsertEventCategoryAction(formData: FormData) {
     name,
     slug,
     description: description || null,
+    participant_count: participantCount,
+    participant_unit: participantUnit,
+    registration_open_at: registrationOpenDate ? normalizeDateInputForStorage(registrationOpenDate) : null,
+    registration_close_at: registrationCloseDate ? normalizeDateInputForStorage(registrationCloseDate) : null,
     competition_start_at: competitionStartDate ? normalizeDateInputForStorage(competitionStartDate) : null,
     competition_end_at: competitionEndDate ? normalizeDateInputForStorage(competitionEndDate) : null,
+    pairing_zone_count: pairingZoneCount,
+    pairing_cluster_count: pairingClusterCount,
+    pairing_group_count: pairingGroupCount,
+    pairing_table_count: pairingTableCount,
+    prize_breakdown: prizeBreakdown,
     is_published: isPublished,
     sort_order: sortOrder,
   };
@@ -526,6 +584,9 @@ export async function upsertEventCategoryAction(formData: FormData) {
   }
 
   if (error) {
+    if (error.message.toLowerCase().includes("column") && error.message.toLowerCase().includes("event_categories")) {
+      redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=schema_not_ready`);
+    }
     if (error.message.toLowerCase().includes("duplicate key")) {
       redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=duplicate_slug`);
     }
