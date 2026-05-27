@@ -46,7 +46,7 @@ const MATCH_OPTIONS = [
   "Beregu",
 ] as const;
 const AGE_OPTIONS = ["Bebas", "U-25", "O+25"] as const;
-const GENDER_OPTIONS = ["Putra", "Putri"] as const;
+const GENDER_OPTIONS = ["Putra", "Putri", "Campuran"] as const;
 
 const REQUIRED_PRIZE_LABELS = ["Juara 1", "Juara 2", "Juara 3", "Juara 4"] as const;
 const OPTIONAL_PRIZE_LABELS = ["Juara 5 - 8", "Juara 9 - 16", "Juara 17 - 32", "Juara 33 - 64"] as const;
@@ -115,7 +115,7 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
   );
 
   return (
-    <form action={action} className="grid gap-4 md:grid-cols-2">
+    <form action={action} className="grid grid-cols-1 gap-4">
       <input type="hidden" name="event_id" value={eventId} />
       {defaults.categoryId ? <input type="hidden" name="category_id" value={defaults.categoryId} /> : null}
       <input type="hidden" name="name" value={categoryName} />
@@ -126,10 +126,10 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
       <input type="hidden" name="participant_unit" value={defaults.participantUnit || "peserta"} />
       <input type="hidden" name="prize_breakdown_json" value={serializedPrizeBreakdown} />
 
-      <h3 className="text-base font-bold text-[#111827] md:col-span-2">A. Identitas Pertandingan</h3>
+      <h3 className="text-base font-bold text-[#111827]">A. Identitas Pertandingan</h3>
 
       <label className="text-sm font-semibold text-[#374151]">
-        1. No Pertandingan
+        No Pertandingan
         <select
           required
           value={noPertandingan}
@@ -149,7 +149,7 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
       </label>
 
       <label className="text-sm font-semibold text-[#374151]">
-        2. Batas Usia
+        Batas Usia
         <select
           required
           value={ageGroup}
@@ -165,7 +165,7 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
       </label>
 
       <label className="text-sm font-semibold text-[#374151]">
-        3. Jenis Kelamin
+        Jenis Kelamin
         <select
           required
           value={genderCategory}
@@ -189,7 +189,7 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
         />
       </label>
 
-      <label className="text-sm font-semibold text-[#374151] md:col-span-2">
+      <label className="text-sm font-semibold text-[#374151]">
         Label Kategori (otomatis)
         <input
           readOnly
@@ -231,10 +231,10 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
         />
       </label>
 
-      <h3 className="text-base font-bold text-[#111827] md:col-span-2">B. Pendaftaran</h3>
+      <h3 className="text-base font-bold text-[#111827]">B. Pendaftaran</h3>
 
       <label className="text-sm font-semibold text-[#374151]">
-        6. Tanggal Mulai Pendaftaran
+        Tanggal Mulai Pendaftaran
         <input
           name="registration_open_date"
           type="date"
@@ -244,7 +244,7 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
       </label>
 
       <label className="text-sm font-semibold text-[#374151]">
-        7. Tanggal Selesai Pendaftaran
+        Tanggal Selesai Pendaftaran
         <input
           name="registration_close_date"
           type="date"
@@ -253,10 +253,10 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
         />
       </label>
 
-      <h3 className="text-base font-bold text-[#111827] md:col-span-2">C. Pairing</h3>
+      <h3 className="text-base font-bold text-[#111827]">C. Pairing</h3>
 
       <label className="text-sm font-semibold text-[#374151]">
-        8. Jumlah Zona
+        Jumlah Zona
         <input
           required
           name="pairing_zone_count"
@@ -268,7 +268,7 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
       </label>
 
       <label className="text-sm font-semibold text-[#374151]">
-        9. Jumlah Cluster
+        Jumlah Cluster
         <input
           required
           name="pairing_cluster_count"
@@ -280,7 +280,7 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
       </label>
 
       <label className="text-sm font-semibold text-[#374151]">
-        10. Jumlah Group
+        Jumlah Group
         <input
           required
           name="pairing_group_count"
@@ -292,7 +292,7 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
       </label>
 
       <label className="text-sm font-semibold text-[#374151]">
-        11. Jumlah Meja
+        Jumlah Meja
         <input
           required
           name="pairing_table_count"
@@ -303,11 +303,11 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
         />
       </label>
 
-      <h3 className="text-base font-bold text-[#111827] md:col-span-2">D. Hadiah</h3>
+      <h3 className="text-base font-bold text-[#111827]">D. Hadiah</h3>
 
-      {[...REQUIRED_PRIZE_LABELS, ...visibleOptionalLabels].map((label, index) => (
+      {[...REQUIRED_PRIZE_LABELS, ...visibleOptionalLabels].map((label) => (
         <label key={label} className="text-sm font-semibold text-[#374151]">
-          {12 + index}. {label}
+          {label}
           <div className="mt-1 flex items-center rounded-lg border border-[#d1d5db] bg-white">
             <span className="border-r border-[#e5e7eb] px-3 py-2 text-sm text-[#6b7280]">Rp.</span>
             <input
@@ -327,7 +327,7 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
         </label>
       ))}
 
-      <div className="md:col-span-2">
+      <div>
         <button
           type="button"
           onClick={() => setVisibleOptionalPrizeCount((prev) => Math.min(prev + 1, OPTIONAL_PRIZE_LABELS.length))}
@@ -343,19 +343,19 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
         <input name="sort_order" type="number" min={0} defaultValue={defaults.sortOrder} className="mt-1 w-full rounded-lg border border-[#d1d5db] px-3 py-2" />
       </label>
 
-      <label className="flex items-center gap-2 rounded-lg border border-[#d1d5db] px-3 py-2 text-sm md:mt-7">
+      <label className="flex items-center gap-2 rounded-lg border border-[#d1d5db] px-3 py-2 text-sm">
         <input type="checkbox" name="is_published" defaultChecked={defaults.isPublished} />
         Publish kategori ini
       </label>
 
-      <div className="md:col-span-2">
+      <div>
         <button type="submit" className="rounded-lg bg-[#111827] px-4 py-2 text-sm font-semibold text-white">
           {submitLabel}
         </button>
       </div>
 
       {isEdit ? null : (
-        <p className="text-xs text-[#6b7280] md:col-span-2">
+        <p className="text-xs text-[#6b7280]">
           Catatan: nilai hadiah diisi angka saja, sistem otomatis menampilkan format Rp. ... ,-
         </p>
       )}

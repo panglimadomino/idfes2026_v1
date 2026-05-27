@@ -502,7 +502,7 @@ export async function upsertEventCategoryAction(formData: FormData) {
   }
 
   const allowedAgeGroups = new Set(["Bebas", "U-25", "O+25"]);
-  const allowedGenderCategories = new Set(["Putra", "Putri"]);
+  const allowedGenderCategories = new Set(["Putra", "Putri", "Campuran"]);
   const ageGroup = allowedAgeGroups.has(ageGroupRaw) ? ageGroupRaw : null;
   const genderCategory = allowedGenderCategories.has(genderCategoryRaw) ? genderCategoryRaw : null;
   if (!ageGroup || !genderCategory) {

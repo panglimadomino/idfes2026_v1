@@ -10,6 +10,7 @@ where age_group is null;
 
 update public.event_categories
 set gender_category = case
+  when lower(name) like '%campuran%' then 'Campuran'
   when lower(name) like '%putri%' then 'Putri'
   else 'Putra'
 end
@@ -27,4 +28,4 @@ alter table public.event_categories
 
 alter table public.event_categories
   drop constraint if exists event_categories_gender_category_check,
-  add constraint event_categories_gender_category_check check (gender_category in ('Putra', 'Putri'));
+  add constraint event_categories_gender_category_check check (gender_category in ('Putra', 'Putri', 'Campuran'));
