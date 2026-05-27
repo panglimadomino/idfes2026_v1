@@ -273,41 +273,102 @@ export async function createEventAction(formData: FormData) {
   }
 
   const name = String(formData.get("name") ?? "").trim();
-  let slug = String(formData.get("slug") ?? "").trim().toLowerCase();
+  const province = String(formData.get("province") ?? "").trim();
   const city = String(formData.get("city") ?? "").trim();
-  const venue = String(formData.get("venue") ?? "").trim();
-  const startAt = String(formData.get("start_at") ?? "").trim();
-  const endAt = String(formData.get("end_at") ?? "").trim();
+  const organizer = String(formData.get("organizer") ?? "").trim();
+  let slug = String(formData.get("slug") ?? "").trim().toLowerCase();
+  const startDate = String(formData.get("start_date") ?? formData.get("start_at") ?? "").trim();
+  const endDate = String(formData.get("end_date") ?? formData.get("end_at") ?? "").trim();
   const status = String(formData.get("status") ?? "draft").trim();
   const isFeatured = formData.get("is_featured") === "on";
+  const bannerFiles = formData
+    .getAll("banners")
+    .filter((entry): entry is File => entry instanceof File && entry.size > 0);
 
-  if (!name || !slug || !startAt || !endAt) {
-    throw new Error("name, slug, start_at, dan end_at wajib diisi.");
+  if (!name || !province || !city || !startDate || !endDate) {
+    throw new Error("Nama event, provinsi, kabupaten/kota, tanggal mulai, dan tanggal selesai wajib diisi.");
   }
 
   if (!["draft", "published", "archived"].includes(status)) {
     throw new Error("Status event tidak valid.");
   }
 
-  slug = slug.replace(/[^a-z0-9-]/g, "-").replace(/--+/g, "-").replace(/^-|-$/g, "");
+  if (bannerFiles.length > 5) {
+    throw new Error("Maksimal 5 banner per event.");
+  }
+
+  if (!slug) {
+    slug = name;
+  }
+  slug = slug
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, "-")
+    .replace(/--+/g, "-")
+    .replace(/^-|-$/g, "");
   if (!slug) {
     throw new Error("Slug event tidak valid.");
   }
 
+  const startAt = /^\d{4}-\d{2}-\d{2}$/.test(startDate) ? `${startDate}T00:00:00+07:00` : startDate;
+  const endAt = /^\d{4}-\d{2}-\d{2}$/.test(endDate) ? `${endDate}T23:59:59+07:00` : endDate;
+
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("events").insert({
-    name,
-    slug,
-    city: city || null,
-    venue: venue || null,
-    start_at: startAt,
-    end_at: endAt,
-    status,
-    is_featured: isFeatured,
-  });
+  const eventCity = `${city}, ${province}`;
+  const { data: insertedEvent, error } = await supabase
+    .from("events")
+    .insert({
+      name,
+      slug,
+      city: eventCity,
+      venue: organizer || null,
+      start_at: startAt,
+      end_at: endAt,
+      status,
+      is_featured: isFeatured,
+    })
+    .select("id")
+    .single();
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  if (insertedEvent && bannerFiles.length > 0) {
+    for (let index = 0; index < bannerFiles.length; index += 1) {
+      const file = bannerFiles[index];
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const objectPath = `pages/events/${slug}/${Date.now()}-${index + 1}-${safeName}`;
+      const bytes = await file.arrayBuffer();
+
+      const { error: uploadError } = await supabase.storage.from("cms-assets").upload(objectPath, bytes, {
+        contentType: file.type || "application/octet-stream",
+        upsert: false,
+      });
+
+      if (uploadError) {
+        throw new Error(`Gagal upload banner: ${uploadError.message}`);
+      }
+
+      const { data: publicUrlData } = supabase.storage.from("cms-assets").getPublicUrl(objectPath);
+      const { error: insertBannerError } = await supabase.from("cms_media_assets").insert({
+        asset_key: null,
+        usage_type: "generic",
+        bucket_id: "cms-assets",
+        object_path: objectPath,
+        public_url: publicUrlData.publicUrl,
+        file_name: file.name,
+        mime_type: file.type || null,
+        file_size: file.size,
+        alt_text: `${name} banner ${index + 1}`,
+        event_id: insertedEvent.id,
+        uploaded_by: access.userId,
+        is_active: true,
+      });
+
+      if (insertBannerError) {
+        throw new Error(`Gagal simpan metadata banner: ${insertBannerError.message}`);
+      }
+    }
   }
 
   revalidatePath("/admin");
