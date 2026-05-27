@@ -9,14 +9,26 @@ export default async function PublicLayout({
 }>) {
   const supabase = await createSupabaseServerClient();
 
-  // Fetch header and footer logos from CMS media
-  const { data: mediaAssets } = await supabase
+  // Fetch header logo (latest uploaded)
+  const { data: headerLogoData } = await supabase
     .from("cms_media_assets")
-    .select("usage_type, public_url, alt_text")
-    .in("usage_type", ["header_logo", "footer_logo"]);
+    .select("public_url, alt_text")
+    .eq("usage_type", "header_logo")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
 
-  const headerLogo = mediaAssets?.find((m) => m.usage_type === "header_logo");
-  const footerLogo = mediaAssets?.find((m) => m.usage_type === "footer_logo");
+  // Fetch footer logo (latest uploaded)
+  const { data: footerLogoData } = await supabase
+    .from("cms_media_assets")
+    .select("public_url, alt_text")
+    .eq("usage_type", "footer_logo")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  const headerLogo = headerLogoData;
+  const footerLogo = footerLogoData;
 
   return (
     <div className="flex min-h-screen flex-col">
