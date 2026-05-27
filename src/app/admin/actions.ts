@@ -396,3 +396,70 @@ export async function createEventAction(formData: FormData) {
   revalidatePath("/admin/events");
   redirect("/admin/events?created=1");
 }
+
+export async function updateEventScheduleAction(formData: FormData) {
+  const access = await requireAdminAccess();
+  if (!access.isSuperAdmin) {
+    redirect("/admin/events/schedule?error=unauthorized");
+  }
+
+  const eventId = String(formData.get("event_id") ?? "").trim();
+  const name = String(formData.get("name") ?? "").trim();
+  const location = String(formData.get("location") ?? "").trim();
+  const organizer = String(formData.get("organizer") ?? "").trim();
+  const slugInput = String(formData.get("slug") ?? "").trim().toLowerCase();
+  const startDate = String(formData.get("start_date") ?? "").trim();
+  const endDate = String(formData.get("end_date") ?? "").trim();
+  const status = String(formData.get("status") ?? "draft").trim();
+  const isFeatured = formData.get("is_featured") === "on";
+
+  if (!eventId || !name || !location || !startDate || !endDate || !slugInput) {
+    redirect("/admin/events/schedule?error=required_fields");
+  }
+
+  if (!["draft", "published", "archived"].includes(status)) {
+    redirect("/admin/events/schedule?error=invalid_status");
+  }
+
+  const slug = slugInput
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, "-")
+    .replace(/--+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  if (!slug) {
+    redirect("/admin/events/schedule?error=invalid_slug");
+  }
+
+  const startAt = /^\d{4}-\d{2}-\d{2}$/.test(startDate) ? `${startDate}T00:00:00+07:00` : startDate;
+  const endAt = /^\d{4}-\d{2}-\d{2}$/.test(endDate) ? `${endDate}T23:59:59+07:00` : endDate;
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("events")
+    .update({
+      name,
+      slug,
+      city: location,
+      venue: organizer || null,
+      start_at: startAt,
+      end_at: endAt,
+      status,
+      is_featured: isFeatured,
+    })
+    .eq("id", eventId);
+
+  if (error) {
+    if (error.message.toLowerCase().includes("duplicate key")) {
+      redirect("/admin/events/schedule?error=duplicate_slug");
+    }
+    redirect("/admin/events/schedule?error=update_failed");
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/events");
+  revalidatePath("/admin/events/schedule");
+  revalidatePath("/event");
+  revalidatePath("/events");
+  redirect("/admin/events/schedule?updated=1");
+}
