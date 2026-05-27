@@ -337,10 +337,10 @@ export async function createEventAction(formData: FormData) {
     for (let index = 0; index < bannerFiles.length; index += 1) {
       const file = bannerFiles[index];
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const objectPath = `pages/events/${slug}/${Date.now()}-${index + 1}-${safeName}`;
+      const objectPath = `events/${insertedEvent.id}/${Date.now()}-${index + 1}-${safeName}`;
       const bytes = await file.arrayBuffer();
 
-      const { error: uploadError } = await supabase.storage.from("cms-assets").upload(objectPath, bytes, {
+      const { error: uploadError } = await supabase.storage.from("event-banners").upload(objectPath, bytes, {
         contentType: file.type || "application/octet-stream",
         upsert: false,
       });
@@ -349,18 +349,16 @@ export async function createEventAction(formData: FormData) {
         throw new Error(`Gagal upload banner: ${uploadError.message}`);
       }
 
-      const { data: publicUrlData } = supabase.storage.from("cms-assets").getPublicUrl(objectPath);
-      const { error: insertBannerError } = await supabase.from("cms_media_assets").insert({
-        asset_key: null,
-        usage_type: "generic",
-        bucket_id: "cms-assets",
+      const { data: publicUrlData } = supabase.storage.from("event-banners").getPublicUrl(objectPath);
+      const { error: insertBannerError } = await supabase.from("event_banners").insert({
+        event_id: insertedEvent.id,
+        bucket_id: "event-banners",
         object_path: objectPath,
         public_url: publicUrlData.publicUrl,
         file_name: file.name,
         mime_type: file.type || null,
         file_size: file.size,
-        alt_text: `${name} banner ${index + 1}`,
-        event_id: insertedEvent.id,
+        sort_order: index + 1,
         uploaded_by: access.userId,
         is_active: true,
       });
