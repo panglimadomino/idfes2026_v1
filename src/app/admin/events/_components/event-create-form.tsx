@@ -36,7 +36,10 @@ export function EventCreateForm({ action }: EventCreateFormProps) {
     async function loadProvinces() {
       setLoadingProvinces(true);
       try {
-        const response = await fetch("https://wilayah.id/api/provinces.json", { cache: "no-store" });
+        const response = await fetch("/api/regions/provinces", { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error("Gagal memuat provinsi");
+        }
         const payload = (await response.json()) as { data?: RegionOption[] };
         if (!isActive) return;
         setProvinces(payload.data ?? []);
@@ -63,7 +66,10 @@ export function EventCreateForm({ action }: EventCreateFormProps) {
     async function loadCities() {
       setLoadingCities(true);
       try {
-        const response = await fetch(`https://wilayah.id/api/regencies/${provinceCode}.json`, { cache: "no-store" });
+        const response = await fetch(`/api/regions/regencies?province=${provinceCode}`, { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error("Gagal memuat kabupaten/kota");
+        }
         const payload = (await response.json()) as { data?: RegionOption[] };
         if (!isActive) return;
         setCities(payload.data ?? []);
