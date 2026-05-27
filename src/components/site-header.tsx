@@ -54,7 +54,7 @@ export function SiteHeader({ headerLogoUrl, eventMenuItems = [] }: SiteHeaderPro
           </button>
 
           <div className="ml-auto hidden items-center justify-end gap-3 md:flex">
-            <nav className="flex items-center justify-end gap-2 text-right">
+            <nav className="flex items-center justify-end gap-2">
               <Link
                 href="/"
                 onClick={() => setOpen(false)}
@@ -76,7 +76,7 @@ export function SiteHeader({ headerLogoUrl, eventMenuItems = [] }: SiteHeaderPro
                   }`}
                 >
                   ID Fes 2026
-                  <span className="text-[10px]">v</span>
+                  <span className="text-[10px]">▼</span>
                 </Link>
 
                 {eventMenuItems.length > 0 ? (
