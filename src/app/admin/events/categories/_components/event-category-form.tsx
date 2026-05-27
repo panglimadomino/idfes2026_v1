@@ -198,7 +198,7 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
         />
       </label>
 
-      <label className="text-sm font-semibold text-[#374151] md:col-span-2">
+      <label className="text-sm font-semibold text-[#374151]">
         Keterangan (opsional)
         <textarea
           name="description"
@@ -210,7 +210,7 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
       </label>
 
       <label className="text-sm font-semibold text-[#374151]">
-        4. Tanggal Mulai Pertandingan
+        Tanggal Mulai Pertandingan
         <input
           required
           name="competition_start_date"
@@ -221,7 +221,7 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
       </label>
 
       <label className="text-sm font-semibold text-[#374151]">
-        5. Tanggal Selesai Pertandingan
+        Tanggal Selesai Pertandingan
         <input
           required
           name="competition_end_date"
