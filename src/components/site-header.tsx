@@ -10,36 +10,35 @@ const navItems = [
   { href: "/berita", label: "Berita" },
 ];
 
+type SiteHeaderProps = {
+  headerLogoUrl?: string | null;
+};
+
 function isActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
   return pathname.startsWith(href);
 }
 
-export function SiteHeader() {
+export function SiteHeader({ headerLogoUrl }: SiteHeaderProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-40 w-full">
-      <div className="bg-black">
-        <div className="site-frame flex h-12 items-center justify-between px-4 text-sm text-white sm:px-8">
-          <p className="font-medium">help@idfes2026.id</p>
-          <div className="flex items-center gap-2">
-            <span className="grid h-9 w-9 place-content-center rounded-full border border-white/70 text-xs">▲</span>
-            <span className="grid h-9 w-9 place-content-center rounded-full border border-white/70 text-xs">IG</span>
-          </div>
-        </div>
-      </div>
-
       <div className="border-b border-black/10 bg-white/95 backdrop-blur">
         <div className="site-frame grid grid-cols-[1fr_auto] items-center gap-4 px-4 py-4 sm:px-8 md:grid-cols-[1fr_auto_1fr]">
           <Link href="/" className="w-fit">
             <div className="flex items-center gap-3">
-              <span className="grid h-10 w-10 place-content-center rounded-md border-2 border-black text-xs font-black leading-none">
-                ID
-                <br />
-                FES
-              </span>
+              {headerLogoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={headerLogoUrl} alt="IDFES logo" className="h-10 w-auto object-contain" />
+              ) : (
+                <span className="grid h-10 w-10 place-content-center rounded-md border-2 border-black text-xs font-black leading-none">
+                  ID
+                  <br />
+                  FES
+                </span>
+              )}
               <div>
                 <p className="font-title text-3xl uppercase leading-none text-black">IDFES 2026</p>
                 <p className="text-xs font-semibold uppercase tracking-wide text-black/70">Indonesia Domino Festival</p>

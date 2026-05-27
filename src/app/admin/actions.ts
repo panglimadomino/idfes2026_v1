@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminAccess } from "@/lib/auth/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function signOutAdminAction() {
@@ -31,7 +32,7 @@ export async function upsertCmsPageAction(formData: FormData) {
     slug = `/${slug}`;
   }
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseAdminClient();
   const { error } = await supabase.from("cms_pages").upsert(
     {
       page_key: pageKey,
@@ -77,7 +78,7 @@ export async function uploadCmsMediaAction(formData: FormData) {
   const objectPath = `${folder}/${Date.now()}-${safeName}`;
   const bytes = await file.arrayBuffer();
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseAdminClient();
   const { error: uploadError } = await supabase.storage.from("cms-assets").upload(objectPath, bytes, {
     contentType: file.type || "application/octet-stream",
     upsert: false,
@@ -105,6 +106,47 @@ export async function uploadCmsMediaAction(formData: FormData) {
 
   if (insertError) {
     throw new Error(insertError.message);
+  }
+
+  revalidatePath("/admin/cms/media");
+}
+
+export async function deleteCmsMediaAction(formData: FormData) {
+  const access = await requireAdminAccess();
+  if (!access.isSuperAdmin) {
+    throw new Error("Hanya super admin yang dapat menghapus media.");
+  }
+
+  const mediaAssetId = String(formData.get("media_asset_id") ?? "").trim();
+  if (!mediaAssetId) {
+    throw new Error("ID media tidak valid.");
+  }
+
+  const supabase = createSupabaseAdminClient();
+
+  const { data: asset, error: assetError } = await supabase
+    .from("cms_media_assets")
+    .select("id, bucket_id, object_path")
+    .eq("id", mediaAssetId)
+    .maybeSingle();
+
+  if (assetError) {
+    throw new Error(assetError.message);
+  }
+
+  if (!asset) {
+    throw new Error("Media tidak ditemukan.");
+  }
+
+  const bucketId = asset.bucket_id || "cms-assets";
+  const { error: storageDeleteError } = await supabase.storage.from(bucketId).remove([asset.object_path]);
+  if (storageDeleteError && !storageDeleteError.message.toLowerCase().includes("not found")) {
+    throw new Error(storageDeleteError.message);
+  }
+
+  const { error: dbDeleteError } = await supabase.from("cms_media_assets").delete().eq("id", mediaAssetId);
+  if (dbDeleteError) {
+    throw new Error(dbDeleteError.message);
   }
 
   revalidatePath("/admin/cms/media");

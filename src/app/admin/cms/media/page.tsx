@@ -1,6 +1,6 @@
 import { requireAdminAccess } from "@/lib/auth/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { uploadCmsMediaAction } from "@/app/admin/actions";
+import { deleteCmsMediaAction, uploadCmsMediaAction } from "@/app/admin/actions";
 
 type MediaAssetRow = {
   id: string;
@@ -83,6 +83,7 @@ export default async function AdminCmsMediaPage() {
                 <th className="px-4 py-3">Asset Key</th>
                 <th className="px-4 py-3">Path</th>
                 <th className="px-4 py-3">Uploaded</th>
+                {access.isSuperAdmin ? <th className="px-4 py-3">Aksi</th> : null}
               </tr>
             </thead>
             <tbody>
@@ -100,11 +101,24 @@ export default async function AdminCmsMediaPage() {
                   <td className="px-4 py-3">{asset.asset_key ?? "-"}</td>
                   <td className="px-4 py-3">{asset.object_path}</td>
                   <td className="px-4 py-3">{new Date(asset.created_at).toLocaleString("id-ID")}</td>
+                  {access.isSuperAdmin ? (
+                    <td className="px-4 py-3">
+                      <form action={deleteCmsMediaAction}>
+                        <input type="hidden" name="media_asset_id" value={asset.id} />
+                        <button
+                          type="submit"
+                          className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700"
+                        >
+                          Hapus
+                        </button>
+                      </form>
+                    </td>
+                  ) : null}
                 </tr>
               ))}
               {rows.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-4 text-[#6b7280]" colSpan={5}>
+                  <td className="px-4 py-4 text-[#6b7280]" colSpan={access.isSuperAdmin ? 6 : 5}>
                     Belum ada media.
                   </td>
                 </tr>
