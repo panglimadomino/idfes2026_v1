@@ -16,12 +16,34 @@ export default async function CategoryDetailPage({ params }: Props) {
   const supabase = createSupabaseClient();
   const { data: category } = await supabase
     .from("event_categories")
-    .select("id, name, slug, description, competition_start_at, competition_end_at")
+    .select(
+      "id, name, slug, description, age_group, gender_category, participant_count, participant_unit, registration_open_at, registration_close_at, competition_start_at, competition_end_at, pairing_zone_count, pairing_cluster_count, pairing_group_count, pairing_table_count, prize_breakdown",
+    )
     .eq("event_id", event.id)
     .eq("slug", categorySlug)
     .eq("is_published", true)
     .maybeSingle();
   if (!category) notFound();
+
+  const prizes = Array.isArray(category.prize_breakdown)
+    ? (category.prize_breakdown as Array<{ label?: unknown; amount?: unknown }>)
+        .map((item) => {
+          const label = typeof item.label === "string" ? item.label : "";
+          const amount = Number(item.amount);
+          if (!label || !Number.isFinite(amount) || amount <= 0) return null;
+          return { label, amount: Math.trunc(amount) };
+        })
+        .filter((item): item is { label: string; amount: number } => item !== null)
+    : [];
+
+  const formatWindow = (start: string | null, end: string | null) => {
+    if (!start && !end) return "-";
+    if (start && end) return `${formatDateId(start)} - ${formatDateId(end)}`;
+    return start ? formatDateId(start) : formatDateId(end as string);
+  };
+
+  const formatRupiah = (value: number) =>
+    new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(value);
 
   return (
     <div className="site-frame space-y-8 px-4 pb-16 pt-8 sm:px-6 lg:px-8">
@@ -50,38 +72,88 @@ export default async function CategoryDetailPage({ params }: Props) {
         </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-3">
+      <section className="grid gap-4 lg:grid-cols-2">
         <article className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-5">
-          <h2 className="text-sm font-bold uppercase text-[var(--ink-soft)]">Countdown Kategori</h2>
-          <p className="mt-2 text-sm text-[var(--ink-soft)]">Start pertandingan mengikuti jadwal resmi kategori.</p>
+          <h2 className="text-sm font-bold uppercase text-[var(--ink-soft)]">Identitas</h2>
+          <dl className="mt-2 space-y-2 text-sm text-[var(--ink-soft)]">
+            <div className="flex justify-between gap-2">
+              <dt>Batas Usia</dt>
+              <dd>{category.age_group ?? "-"}</dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt>Jenis Kelamin</dt>
+              <dd>{category.gender_category ?? "-"}</dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt>Jumlah Peserta</dt>
+              <dd>
+                {category.participant_count ?? "-"}{" "}
+                {category.participant_unit === "pasang"
+                  ? "pasang"
+                  : category.participant_unit === "athlet"
+                    ? "atlet"
+                    : "peserta"}
+              </dd>
+            </div>
+          </dl>
         </article>
         <article className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-5">
-          <h2 className="text-sm font-bold uppercase text-[var(--ink-soft)]">Info Kategori</h2>
-          <p className="mt-2 text-sm text-[var(--ink-soft)]">{category.description ?? "Deskripsi kategori belum tersedia."}</p>
-        </article>
-        <article className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-5">
-          <h2 className="text-sm font-bold uppercase text-[var(--ink-soft)]">Periode Kategori</h2>
-          <p className="mt-2 text-sm text-[var(--ink-soft)]">
-            {category.competition_start_at ? formatDateId(category.competition_start_at) : "-"} -{" "}
-            {category.competition_end_at ? formatDateId(category.competition_end_at) : "-"}
-          </p>
+          <h2 className="text-sm font-bold uppercase text-[var(--ink-soft)]">Jadwal</h2>
+          <dl className="mt-2 space-y-2 text-sm text-[var(--ink-soft)]">
+            <div className="flex justify-between gap-2">
+              <dt>Pendaftaran</dt>
+              <dd>{formatWindow(category.registration_open_at, category.registration_close_at)}</dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt>Pertandingan</dt>
+              <dd>{formatWindow(category.competition_start_at, category.competition_end_at)}</dd>
+            </div>
+          </dl>
         </article>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {[
-          "Live Report Status Pendaftaran",
-          "Pairing RR",
-          "Pairing SE",
-          "Standing / Klasemen",
-          "Bracket / Hasil Pertandingan",
-          "Berita Khusus Kategori",
-        ].map((item) => (
-          <article key={item} className="rounded-2xl border border-dashed border-[var(--line-soft)] bg-[var(--surface-card)] p-5">
-            <h3 className="text-lg font-bold text-[var(--ink-strong)]">{item}</h3>
-            <p className="mt-2 text-sm text-[var(--ink-soft)]">Slot modul ini siap dihubungkan ke API Supabase.</p>
-          </article>
-        ))}
+      <section className="grid gap-4 lg:grid-cols-2">
+        <article className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-5">
+          <h2 className="text-sm font-bold uppercase text-[var(--ink-soft)]">Pairing</h2>
+          <dl className="mt-2 space-y-2 text-sm text-[var(--ink-soft)]">
+            <div className="flex justify-between gap-2">
+              <dt>Zona</dt>
+              <dd>{category.pairing_zone_count ?? 0}</dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt>Cluster</dt>
+              <dd>{category.pairing_cluster_count ?? 0}</dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt>Group</dt>
+              <dd>{category.pairing_group_count ?? 0}</dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt>Meja</dt>
+              <dd>{category.pairing_table_count ?? 0}</dd>
+            </div>
+          </dl>
+        </article>
+        <article className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-5">
+          <h2 className="text-sm font-bold uppercase text-[var(--ink-soft)]">Hadiah</h2>
+          {prizes.length > 0 ? (
+            <ul className="mt-2 space-y-2 text-sm text-[var(--ink-soft)]">
+              {prizes.map((prize) => (
+                <li key={prize.label} className="flex justify-between gap-2">
+                  <span>{prize.label}</span>
+                  <span>{formatRupiah(prize.amount)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-sm text-[var(--ink-soft)]">Belum ada data hadiah.</p>
+          )}
+        </article>
+      </section>
+
+      <section className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-5">
+        <h2 className="text-sm font-bold uppercase text-[var(--ink-soft)]">Keterangan</h2>
+        <p className="mt-2 text-sm text-[var(--ink-soft)]">{category.description ?? "Deskripsi kategori belum tersedia."}</p>
       </section>
     </div>
   );

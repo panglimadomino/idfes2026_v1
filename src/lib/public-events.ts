@@ -23,8 +23,19 @@ export type PublicEventCategory = {
   name: string;
   slug: string;
   description: string | null;
+  age_group: string | null;
+  gender_category: string | null;
+  participant_count: number | null;
+  participant_unit: string | null;
+  registration_open_at: string | null;
+  registration_close_at: string | null;
   competition_start_at: string | null;
   competition_end_at: string | null;
+  pairing_zone_count: number | null;
+  pairing_cluster_count: number | null;
+  pairing_group_count: number | null;
+  pairing_table_count: number | null;
+  prize_breakdown: Array<{ label: string; amount: number }>;
 };
 
 export type PublicEventNews = {
@@ -130,14 +141,43 @@ export async function getPublishedCategoriesByEventId(eventId: string): Promise<
     const supabase = createSupabaseClient();
     const { data, error } = await supabase
       .from("event_categories")
-      .select("id, name, slug, description, competition_start_at, competition_end_at")
+      .select(
+        "id, name, slug, description, age_group, gender_category, participant_count, participant_unit, registration_open_at, registration_close_at, competition_start_at, competition_end_at, pairing_zone_count, pairing_cluster_count, pairing_group_count, pairing_table_count, prize_breakdown",
+      )
       .eq("event_id", eventId)
       .eq("is_published", true)
       .order("sort_order", { ascending: true })
       .limit(30);
 
     if (error || !data) return [];
-    return data as PublicEventCategory[];
+    return (data as Array<Record<string, unknown>>).map((item) => ({
+      id: String(item.id ?? ""),
+      name: String(item.name ?? ""),
+      slug: String(item.slug ?? ""),
+      description: typeof item.description === "string" ? item.description : null,
+      age_group: typeof item.age_group === "string" ? item.age_group : null,
+      gender_category: typeof item.gender_category === "string" ? item.gender_category : null,
+      participant_count: typeof item.participant_count === "number" ? item.participant_count : null,
+      participant_unit: typeof item.participant_unit === "string" ? item.participant_unit : null,
+      registration_open_at: typeof item.registration_open_at === "string" ? item.registration_open_at : null,
+      registration_close_at: typeof item.registration_close_at === "string" ? item.registration_close_at : null,
+      competition_start_at: typeof item.competition_start_at === "string" ? item.competition_start_at : null,
+      competition_end_at: typeof item.competition_end_at === "string" ? item.competition_end_at : null,
+      pairing_zone_count: typeof item.pairing_zone_count === "number" ? item.pairing_zone_count : null,
+      pairing_cluster_count: typeof item.pairing_cluster_count === "number" ? item.pairing_cluster_count : null,
+      pairing_group_count: typeof item.pairing_group_count === "number" ? item.pairing_group_count : null,
+      pairing_table_count: typeof item.pairing_table_count === "number" ? item.pairing_table_count : null,
+      prize_breakdown: Array.isArray(item.prize_breakdown)
+        ? (item.prize_breakdown as Array<{ label?: unknown; amount?: unknown }>)
+            .map((prize) => {
+              const label = typeof prize.label === "string" ? prize.label : "";
+              const amount = Number(prize.amount);
+              if (!label || !Number.isFinite(amount) || amount <= 0) return null;
+              return { label, amount: Math.trunc(amount) };
+            })
+            .filter((prize): prize is { label: string; amount: number } => prize !== null)
+        : [],
+    }));
   } catch {
     return [];
   }

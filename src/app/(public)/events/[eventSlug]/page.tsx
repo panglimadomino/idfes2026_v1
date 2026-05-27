@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { formatDateId } from "@/lib/date-id";
 import {
+  type PublicEventCategory,
   extractProvinceLabel,
   getPublishedCategoriesByEventId,
   getPublishedEventBySlug,
@@ -11,6 +12,23 @@ import {
 type Props = {
   params: Promise<{ eventSlug: string }>;
 };
+
+function formatWindow(start: string | null, end: string | null) {
+  if (!start && !end) return "Belum ditentukan";
+  if (start && end) return `${formatDateId(start)} - ${formatDateId(end)}`;
+  return start ? formatDateId(start) : formatDateId(end as string);
+}
+
+function formatParticipant(category: PublicEventCategory) {
+  const count = category.participant_count;
+  const unit = category.participant_unit === "pasang" ? "pasang" : category.participant_unit === "athlet" ? "atlet" : "peserta";
+  if (!count || count <= 0) return "-";
+  return `${count} ${unit}`;
+}
+
+function formatRupiah(value: number) {
+  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(value);
+}
 
 export default async function EventDetailPage({ params }: Props) {
   const { eventSlug } = await params;
@@ -43,11 +61,42 @@ export default async function EventDetailPage({ params }: Props) {
               <article key={category.id} className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-5">
                 <h3 className="text-xl font-bold text-[var(--ink-strong)]">{category.name}</h3>
                 <p className="mt-2 text-sm text-[var(--ink-soft)]">{category.description ?? "Kategori event."}</p>
-                <p className="mt-2 text-sm text-[var(--ink-soft)]">
-                  {category.competition_start_at
-                    ? formatDateId(category.competition_start_at)
-                    : "Tanggal belum ditentukan"}
-                </p>
+                <dl className="mt-3 space-y-1 text-sm text-[var(--ink-soft)]">
+                  <div className="flex justify-between gap-2">
+                    <dt>Identitas</dt>
+                    <dd>{category.age_group ?? "-"} | {category.gender_category ?? "-"}</dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt>Jumlah Peserta</dt>
+                    <dd>{formatParticipant(category)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt>Pendaftaran</dt>
+                    <dd>{formatWindow(category.registration_open_at, category.registration_close_at)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt>Pertandingan</dt>
+                    <dd>{formatWindow(category.competition_start_at, category.competition_end_at)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt>Pairing</dt>
+                    <dd>
+                      Z{category.pairing_zone_count ?? 0} C{category.pairing_cluster_count ?? 0} G{category.pairing_group_count ?? 0} M{category.pairing_table_count ?? 0}
+                    </dd>
+                  </div>
+                  {category.prize_breakdown.length > 0 ? (
+                    <div className="flex justify-between gap-2">
+                      <dt>Total Pos Hadiah</dt>
+                      <dd>{category.prize_breakdown.length} juara</dd>
+                    </div>
+                  ) : null}
+                  {category.prize_breakdown[0] ? (
+                    <div className="flex justify-between gap-2">
+                      <dt>{category.prize_breakdown[0].label}</dt>
+                      <dd>{formatRupiah(category.prize_breakdown[0].amount)}</dd>
+                    </div>
+                  ) : null}
+                </dl>
                 <Link
                   href={`/events/${event.slug}/categories/${category.slug}`}
                   className="mt-4 inline-flex rounded-full bg-[var(--ink-strong)] px-4 py-2 text-sm font-bold text-[var(--surface-card)]"
