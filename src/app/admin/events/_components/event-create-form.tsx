@@ -29,6 +29,7 @@ export function EventCreateForm({ action }: EventCreateFormProps) {
   const [loadingProvinces, setLoadingProvinces] = useState(true);
   const [loadingCities, setLoadingCities] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [bannerInputCount, setBannerInputCount] = useState(1);
 
   useEffect(() => {
     let isActive = true;
@@ -215,13 +216,40 @@ export function EventCreateForm({ action }: EventCreateFormProps) {
 
       <label className="text-sm font-semibold text-[#374151] md:col-span-2">
         6. Upload Banner (PNG/JPG, maksimal 5 gambar)
-        <input
-          name="banners"
-          type="file"
-          accept="image/png,image/jpeg,image/jpg"
-          multiple
-          className="mt-1 w-full rounded-lg border border-[#d1d5db] px-3 py-2"
-        />
+        <div className="mt-2 space-y-2">
+          {Array.from({ length: bannerInputCount }).map((_, index) => (
+            <div key={`banner-input-${index}`} className="flex items-center gap-2">
+              <input
+                name="banners"
+                type="file"
+                accept="image/png,image/jpeg,image/jpg"
+                className="w-full rounded-lg border border-[#d1d5db] px-3 py-2"
+              />
+              {bannerInputCount > 1 && index === bannerInputCount - 1 ? (
+                <button
+                  type="button"
+                  onClick={() => setBannerInputCount((prev) => Math.max(1, prev - 1))}
+                  className="rounded-lg border border-[#d1d5db] px-3 py-2 text-xs font-semibold text-[#374151] hover:bg-[#f9fafb]"
+                >
+                  Hapus Slot
+                </button>
+              ) : null}
+            </div>
+          ))}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setBannerInputCount((prev) => Math.min(5, prev + 1))}
+              disabled={bannerInputCount >= 5}
+              className="rounded-lg border border-[#d1d5db] px-3 py-2 text-xs font-semibold text-[#111827] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              + Tambah Banner
+            </button>
+            <span className="text-xs font-normal text-[#6b7280]">
+              {bannerInputCount}/5 slot banner
+            </span>
+          </div>
+        </div>
       </label>
 
       <label className="flex items-center gap-2 rounded-lg border border-[#d1d5db] px-3 py-2 text-sm md:col-span-2">
