@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -15,7 +16,12 @@ function isActive(pathname: string, href: string) {
   return pathname.startsWith(href);
 }
 
-export function SiteHeader() {
+type SiteHeaderProps = {
+  logoUrl?: string | null;
+  logoAlt?: string | null;
+};
+
+export function SiteHeader({ logoUrl, logoAlt }: SiteHeaderProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -34,17 +40,28 @@ export function SiteHeader() {
       <div className="border-b border-black/10 bg-white/95 backdrop-blur">
         <div className="site-frame grid grid-cols-[1fr_auto] items-center gap-4 px-4 py-4 sm:px-8 md:grid-cols-[1fr_auto_1fr]">
           <Link href="/" className="w-fit">
-            <div className="flex items-center gap-3">
-              <span className="grid h-10 w-10 place-content-center rounded-md border-2 border-black text-xs font-black leading-none">
-                ID
-                <br />
-                FES
-              </span>
-              <div>
-                <p className="font-title text-3xl uppercase leading-none text-black">IDFES 2026</p>
-                <p className="text-xs font-semibold uppercase tracking-wide text-black/70">Indonesia Domino Festival</p>
+            {logoUrl ? (
+              <Image
+                src={logoUrl}
+                alt={logoAlt ?? "IDFES 2026 Logo"}
+                width={200}
+                height={50}
+                className="h-10 w-auto object-contain"
+                priority
+              />
+            ) : (
+              <div className="flex items-center gap-3">
+                <span className="grid h-10 w-10 place-content-center rounded-md border-2 border-black text-xs font-black leading-none">
+                  ID
+                  <br />
+                  FES
+                </span>
+                <div>
+                  <p className="font-title text-3xl uppercase leading-none text-black">IDFES 2026</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-black/70">Indonesia Domino Festival</p>
+                </div>
               </div>
-            </div>
+            )}
           </Link>
 
           <button
