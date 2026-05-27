@@ -1,5 +1,5 @@
 import { requireAdminAccess } from "@/lib/auth/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { upsertCmsPageAction } from "@/app/admin/actions";
 
 type CmsPageRow = {
@@ -13,7 +13,7 @@ type CmsPageRow = {
 
 export default async function AdminCmsPagesPage() {
   const access = await requireAdminAccess();
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseAdminClient();
 
   const { data: pages, error } = await supabase
     .from("cms_pages")
