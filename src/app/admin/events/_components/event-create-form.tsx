@@ -252,6 +252,16 @@ export function EventCreateForm({ action }: EventCreateFormProps) {
         </div>
       </label>
 
+      <label className="text-sm font-semibold text-[#374151] md:col-span-2">
+        7. Link Map Venue
+        <input
+          name="venue_map_url"
+          type="url"
+          placeholder="https://maps.google.com/..."
+          className="mt-1 w-full rounded-lg border border-[#d1d5db] px-3 py-2"
+        />
+      </label>
+
       <label className="flex items-center gap-2 rounded-lg border border-[#d1d5db] px-3 py-2 text-sm md:col-span-2">
         <input type="checkbox" name="is_featured" />
         Jadikan event aktif/featured

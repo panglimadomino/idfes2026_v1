@@ -276,6 +276,7 @@ export async function createEventAction(formData: FormData) {
   const province = String(formData.get("province") ?? "").trim();
   const city = String(formData.get("city") ?? "").trim();
   const organizer = String(formData.get("organizer") ?? "").trim();
+  const venueMapUrl = String(formData.get("venue_map_url") ?? "").trim();
   let slug = String(formData.get("slug") ?? "").trim().toLowerCase();
   const startDate = String(formData.get("start_date") ?? formData.get("start_at") ?? "").trim();
   const endDate = String(formData.get("end_date") ?? formData.get("end_at") ?? "").trim();
@@ -321,6 +322,7 @@ export async function createEventAction(formData: FormData) {
       slug,
       city: eventCity,
       venue: organizer || null,
+      venue_map_url: venueMapUrl || null,
       start_at: startAt,
       end_at: endAt,
       status,
