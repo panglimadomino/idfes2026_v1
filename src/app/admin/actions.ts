@@ -485,6 +485,13 @@ export async function upsertEventCategoryAction(formData: FormData) {
   const description = String(formData.get("description") ?? "").trim();
   const participantCountRaw = String(formData.get("participant_count") ?? "").trim();
   const participantUnitRaw = String(formData.get("participant_unit") ?? "").trim().toLowerCase();
+  const registrationFeeRaw = String(formData.get("registration_fee") ?? "").trim();
+  const registrationBankName1 = String(formData.get("registration_bank_name_1") ?? "").trim();
+  const registrationBankAccountNumber1 = String(formData.get("registration_bank_account_number_1") ?? "").trim();
+  const registrationBankAccountHolder1 = String(formData.get("registration_bank_account_holder_1") ?? "").trim();
+  const registrationBankName2 = String(formData.get("registration_bank_name_2") ?? "").trim();
+  const registrationBankAccountNumber2 = String(formData.get("registration_bank_account_number_2") ?? "").trim();
+  const registrationBankAccountHolder2 = String(formData.get("registration_bank_account_holder_2") ?? "").trim();
   const registrationOpenDate = String(formData.get("registration_open_date") ?? "").trim();
   const registrationCloseDate = String(formData.get("registration_close_date") ?? "").trim();
   const competitionStartDate = String(formData.get("competition_start_date") ?? "").trim();
@@ -520,6 +527,11 @@ export async function upsertEventCategoryAction(formData: FormData) {
 
   const allowedParticipantUnits = new Set(["pasang", "athlet", "peserta"]);
   const participantUnit = allowedParticipantUnits.has(participantUnitRaw) ? participantUnitRaw : "peserta";
+  const registrationFeeDigits = registrationFeeRaw.replace(/\D/g, "");
+  const registrationFee = registrationFeeDigits ? Number.parseInt(registrationFeeDigits, 10) : null;
+  if (registrationFee !== null && (Number.isNaN(registrationFee) || registrationFee < 0)) {
+    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=invalid_registration_fee`);
+  }
 
   const pairingZoneCount = Number.parseInt(pairingZoneCountRaw || "0", 10);
   const pairingClusterCount = Number.parseInt(pairingClusterCountRaw || "0", 10);
@@ -571,6 +583,13 @@ export async function upsertEventCategoryAction(formData: FormData) {
     description: description || null,
     participant_count: participantCount,
     participant_unit: participantUnit,
+    registration_fee: registrationFee,
+    registration_bank_name_1: registrationBankName1 || null,
+    registration_bank_account_number_1: registrationBankAccountNumber1 || null,
+    registration_bank_account_holder_1: registrationBankAccountHolder1 || null,
+    registration_bank_name_2: registrationBankName2 || null,
+    registration_bank_account_number_2: registrationBankAccountNumber2 || null,
+    registration_bank_account_holder_2: registrationBankAccountHolder2 || null,
     age_group: ageGroup,
     gender_category: genderCategory,
     registration_open_at: registrationOpenDate ? normalizeDateInputForStorage(registrationOpenDate) : null,

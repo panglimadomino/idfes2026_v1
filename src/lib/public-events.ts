@@ -28,6 +28,7 @@ export type PublicEventCategory = {
   gender_category: string | null;
   participant_count: number | null;
   participant_unit: string | null;
+  registration_fee: number | null;
   registration_open_at: string | null;
   registration_close_at: string | null;
   competition_start_at: string | null;
@@ -140,15 +141,29 @@ export async function getPublishedEventBySlug(slug: string): Promise<PublicEvent
 export async function getPublishedCategoriesByEventId(eventId: string): Promise<PublicEventCategory[]> {
   try {
     const supabase = createSupabaseClient();
-    const { data, error } = await supabase
+    const selectWithFee =
+      "id, name, slug, sort_order, description, age_group, gender_category, participant_count, participant_unit, registration_fee, registration_open_at, registration_close_at, competition_start_at, competition_end_at, pairing_zone_count, pairing_cluster_count, pairing_group_count, pairing_table_count, prize_breakdown";
+    const selectWithoutFee =
+      "id, name, slug, sort_order, description, age_group, gender_category, participant_count, participant_unit, registration_open_at, registration_close_at, competition_start_at, competition_end_at, pairing_zone_count, pairing_cluster_count, pairing_group_count, pairing_table_count, prize_breakdown";
+
+    const query = supabase
       .from("event_categories")
-      .select(
-        "id, name, slug, sort_order, description, age_group, gender_category, participant_count, participant_unit, registration_open_at, registration_close_at, competition_start_at, competition_end_at, pairing_zone_count, pairing_cluster_count, pairing_group_count, pairing_table_count, prize_breakdown",
-      )
+      .select(selectWithFee)
       .eq("event_id", eventId)
       .eq("is_published", true)
       .order("sort_order", { ascending: true })
       .limit(30);
+    let { data, error } = await query;
+
+    if (error && String(error.message ?? "").toLowerCase().includes("registration_fee")) {
+      ({ data, error } = await supabase
+        .from("event_categories")
+        .select(selectWithoutFee)
+        .eq("event_id", eventId)
+        .eq("is_published", true)
+        .order("sort_order", { ascending: true })
+        .limit(30));
+    }
 
     if (error || !data) return [];
     return (data as Array<Record<string, unknown>>).map((item) => ({
@@ -161,6 +176,7 @@ export async function getPublishedCategoriesByEventId(eventId: string): Promise<
       gender_category: typeof item.gender_category === "string" ? item.gender_category : null,
       participant_count: typeof item.participant_count === "number" ? item.participant_count : null,
       participant_unit: typeof item.participant_unit === "string" ? item.participant_unit : null,
+      registration_fee: typeof item.registration_fee === "number" ? item.registration_fee : null,
       registration_open_at: typeof item.registration_open_at === "string" ? item.registration_open_at : null,
       registration_close_at: typeof item.registration_close_at === "string" ? item.registration_close_at : null,
       competition_start_at: typeof item.competition_start_at === "string" ? item.competition_start_at : null,

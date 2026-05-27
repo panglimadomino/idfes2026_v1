@@ -24,6 +24,13 @@ type EventCategoryRow = {
   competition_end_at: string | null;
   participant_count: number | null;
   participant_unit: string | null;
+  registration_fee: number | null;
+  registration_bank_name_1: string | null;
+  registration_bank_account_number_1: string | null;
+  registration_bank_account_holder_1: string | null;
+  registration_bank_name_2: string | null;
+  registration_bank_account_number_2: string | null;
+  registration_bank_account_holder_2: string | null;
   pairing_zone_count: number | null;
   pairing_cluster_count: number | null;
   pairing_group_count: number | null;
@@ -58,6 +65,7 @@ function getErrorMessage(errorCode?: string) {
   if (errorCode === "invalid_sort_order") return "Sort order harus berupa angka.";
   if (errorCode === "invalid_identity_config") return "Konfigurasi No Pertandingan, Batas Usia, atau Jenis Kelamin tidak valid.";
   if (errorCode === "invalid_participant_count") return "Jumlah peserta harus lebih dari 0.";
+  if (errorCode === "invalid_registration_fee") return "Biaya pendaftaran tidak valid.";
   if (errorCode === "invalid_pairing_config") return "Nilai pairing tidak valid. Gunakan angka 0 atau lebih.";
   if (errorCode === "invalid_prize_config") return "Konfigurasi hadiah tidak valid.";
   if (errorCode === "invalid_registration_window") return "Tanggal selesai pendaftaran tidak boleh lebih awal dari tanggal mulai pendaftaran.";
@@ -96,7 +104,7 @@ export default async function AdminEventCategoriesPage({ searchParams }: AdminEv
     const { data, error } = await supabase
       .from("event_categories")
       .select(
-        "id, name, slug, description, age_group, gender_category, registration_open_at, registration_close_at, competition_start_at, competition_end_at, participant_count, participant_unit, pairing_zone_count, pairing_cluster_count, pairing_group_count, pairing_table_count, prize_breakdown, is_published, sort_order",
+        "id, name, slug, description, age_group, gender_category, registration_open_at, registration_close_at, competition_start_at, competition_end_at, participant_count, participant_unit, registration_fee, registration_bank_name_1, registration_bank_account_number_1, registration_bank_account_holder_1, registration_bank_name_2, registration_bank_account_number_2, registration_bank_account_holder_2, pairing_zone_count, pairing_cluster_count, pairing_group_count, pairing_table_count, prize_breakdown, is_published, sort_order",
       )
       .eq("event_id", selectedEventId)
       .order("sort_order", { ascending: true })
@@ -185,6 +193,13 @@ export default async function AdminEventCategoriesPage({ searchParams }: AdminEv
                 description: "",
                 participantCount: null,
                 participantUnit: "peserta",
+                registrationFee: null,
+                registrationBankName1: "",
+                registrationBankAccountNumber1: "",
+                registrationBankAccountHolder1: "",
+                registrationBankName2: "",
+                registrationBankAccountNumber2: "",
+                registrationBankAccountHolder2: "",
                 competitionStartDate: "",
                 competitionEndDate: "",
                 registrationOpenDate: "",
@@ -228,6 +243,13 @@ export default async function AdminEventCategoriesPage({ searchParams }: AdminEv
                   description: category.description ?? "",
                   participantCount: category.participant_count,
                   participantUnit: category.participant_unit ?? "",
+                  registrationFee: category.registration_fee,
+                  registrationBankName1: category.registration_bank_name_1 ?? "",
+                  registrationBankAccountNumber1: category.registration_bank_account_number_1 ?? "",
+                  registrationBankAccountHolder1: category.registration_bank_account_holder_1 ?? "",
+                  registrationBankName2: category.registration_bank_name_2 ?? "",
+                  registrationBankAccountNumber2: category.registration_bank_account_number_2 ?? "",
+                  registrationBankAccountHolder2: category.registration_bank_account_holder_2 ?? "",
                   competitionStartDate: category.competition_start_at ? toDateInputValueId(category.competition_start_at) : "",
                   competitionEndDate: category.competition_end_at ? toDateInputValueId(category.competition_end_at) : "",
                   registrationOpenDate: category.registration_open_at ? toDateInputValueId(category.registration_open_at) : "",

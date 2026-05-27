@@ -89,32 +89,12 @@ export default async function EventDetailPage({ params }: Props) {
                       <dd>{category.gender_category ?? identity.jenisKelamin}</dd>
                     </div>
                     <div className="flex justify-between gap-2">
-                      <dt>Slug</dt>
-                      <dd>{category.slug}</dd>
-                    </div>
-                    <div className="flex justify-between gap-2">
-                      <dt>Label Kategori</dt>
-                      <dd>{category.name}</dd>
-                    </div>
-                    <div className="flex justify-between gap-2">
                       <dt>Jumlah Peserta</dt>
                       <dd>{formatParticipant(category)}</dd>
                     </div>
                     <div className="flex justify-between gap-2">
-                      <dt>Mulai Pendaftaran</dt>
-                      <dd>{category.registration_open_at ? formatDateId(category.registration_open_at) : "-"}</dd>
-                    </div>
-                    <div className="flex justify-between gap-2">
-                      <dt>Selesai Pendaftaran</dt>
-                      <dd>{category.registration_close_at ? formatDateId(category.registration_close_at) : "-"}</dd>
-                    </div>
-                    <div className="flex justify-between gap-2">
-                      <dt>Mulai Pertandingan</dt>
-                      <dd>{category.competition_start_at ? formatDateId(category.competition_start_at) : "-"}</dd>
-                    </div>
-                    <div className="flex justify-between gap-2">
-                      <dt>Selesai Pertandingan</dt>
-                      <dd>{category.competition_end_at ? formatDateId(category.competition_end_at) : "-"}</dd>
+                      <dt>Biaya Pendaftaran</dt>
+                      <dd>{category.registration_fee !== null ? formatRupiah(category.registration_fee) : "-"}</dd>
                     </div>
                     <div className="flex justify-between gap-2">
                       <dt>Periode Pendaftaran</dt>
@@ -140,16 +120,6 @@ export default async function EventDetailPage({ params }: Props) {
                       <dt>Jumlah Meja</dt>
                       <dd>{category.pairing_table_count ?? 0}</dd>
                     </div>
-                    <div className="flex justify-between gap-2">
-                      <dt>Sort Order</dt>
-                      <dd>{category.sort_order ?? "-"}</dd>
-                    </div>
-                    {category.prize_breakdown.length > 0 ? (
-                      <div className="flex justify-between gap-2">
-                        <dt>Total Pos Hadiah</dt>
-                        <dd>{category.prize_breakdown.length} juara</dd>
-                      </div>
-                    ) : null}
                     {category.prize_breakdown.map((prize) => (
                       <div key={prize.label} className="flex justify-between gap-2">
                         <dt>{prize.label}</dt>

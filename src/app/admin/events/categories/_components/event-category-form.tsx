@@ -16,6 +16,13 @@ type EventCategoryFormDefaults = {
   description: string;
   participantCount: number | null;
   participantUnit: string;
+  registrationFee: number | null;
+  registrationBankName1: string;
+  registrationBankAccountNumber1: string;
+  registrationBankAccountHolder1: string;
+  registrationBankName2: string;
+  registrationBankAccountNumber2: string;
+  registrationBankAccountHolder2: string;
   competitionStartDate: string;
   competitionEndDate: string;
   registrationOpenDate: string;
@@ -75,6 +82,9 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
   const [slug, setSlug] = useState(defaults.slug || toSlug(initialMatchName));
   const [participantCount, setParticipantCount] = useState(
     defaults.participantCount !== null && defaults.participantCount !== undefined ? String(defaults.participantCount) : "",
+  );
+  const [registrationFee, setRegistrationFee] = useState(
+    defaults.registrationFee !== null && defaults.registrationFee !== undefined ? String(defaults.registrationFee) : "",
   );
   const [visibleOptionalPrizeCount, setVisibleOptionalPrizeCount] = useState(() => {
     let count = 0;
@@ -353,6 +363,78 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
           + Tambah Juara
         </button>
       </div>
+
+      <h3 className="text-base font-bold text-[#111827]">E. Pendaftaran</h3>
+
+      <label className="text-sm font-semibold text-[#374151]">
+        Biaya Pendaftaran
+        <div className="mt-1 flex items-center rounded-lg border border-[#d1d5db] bg-white">
+          <span className="border-r border-[#e5e7eb] px-3 py-2 text-sm text-[#6b7280]">Rp.</span>
+          <input
+            name="registration_fee"
+            inputMode="numeric"
+            placeholder="0"
+            value={registrationFee}
+            onChange={(event) => setRegistrationFee(event.target.value.replace(/\D/g, ""))}
+            className="w-full px-3 py-2 outline-none"
+          />
+          <span className="border-l border-[#e5e7eb] px-3 py-2 text-sm text-[#6b7280]">,-</span>
+        </div>
+      </label>
+
+      <label className="text-sm font-semibold text-[#374151]">
+        Nama Bank 1
+        <input
+          name="registration_bank_name_1"
+          defaultValue={defaults.registrationBankName1}
+          className="mt-1 w-full rounded-lg border border-[#d1d5db] px-3 py-2"
+        />
+      </label>
+
+      <label className="text-sm font-semibold text-[#374151]">
+        No Rek 1
+        <input
+          name="registration_bank_account_number_1"
+          defaultValue={defaults.registrationBankAccountNumber1}
+          className="mt-1 w-full rounded-lg border border-[#d1d5db] px-3 py-2"
+        />
+      </label>
+
+      <label className="text-sm font-semibold text-[#374151]">
+        Atas Nama 1
+        <input
+          name="registration_bank_account_holder_1"
+          defaultValue={defaults.registrationBankAccountHolder1}
+          className="mt-1 w-full rounded-lg border border-[#d1d5db] px-3 py-2"
+        />
+      </label>
+
+      <label className="text-sm font-semibold text-[#374151]">
+        Nama Bank 2
+        <input
+          name="registration_bank_name_2"
+          defaultValue={defaults.registrationBankName2}
+          className="mt-1 w-full rounded-lg border border-[#d1d5db] px-3 py-2"
+        />
+      </label>
+
+      <label className="text-sm font-semibold text-[#374151]">
+        No Rek 2
+        <input
+          name="registration_bank_account_number_2"
+          defaultValue={defaults.registrationBankAccountNumber2}
+          className="mt-1 w-full rounded-lg border border-[#d1d5db] px-3 py-2"
+        />
+      </label>
+
+      <label className="text-sm font-semibold text-[#374151]">
+        Atas Nama 2
+        <input
+          name="registration_bank_account_holder_2"
+          defaultValue={defaults.registrationBankAccountHolder2}
+          className="mt-1 w-full rounded-lg border border-[#d1d5db] px-3 py-2"
+        />
+      </label>
 
       <label className="text-sm font-semibold text-[#374151]">
         Sort Order
