@@ -54,6 +54,112 @@ export async function upsertCmsPageAction(formData: FormData) {
   revalidatePath("/admin/cms/pages");
 }
 
+export async function upsertCmsSectionAction(formData: FormData) {
+  const access = await requireAdminAccess();
+  if (!access.isSuperAdmin) {
+    throw new Error("Hanya super admin yang dapat mengubah CMS sections.");
+  }
+
+  const pageId = String(formData.get("page_id") ?? "").trim();
+  const sectionKey = String(formData.get("section_key") ?? "").trim();
+  const sectionType = String(formData.get("section_type") ?? "").trim();
+  const title = String(formData.get("title") ?? "").trim();
+  const subtitle = String(formData.get("subtitle") ?? "").trim();
+  const isVisible = formData.get("is_visible") === "on";
+  const sortOrderRaw = String(formData.get("sort_order") ?? "0").trim();
+  const contentRaw = String(formData.get("content_json") ?? "{}").trim();
+
+  if (!pageId || !sectionKey || !sectionType) {
+    throw new Error("page_id, section_key, dan section_type wajib diisi.");
+  }
+
+  const sortOrder = Number.parseInt(sortOrderRaw || "0", 10);
+  if (Number.isNaN(sortOrder)) {
+    throw new Error("sort_order harus berupa angka.");
+  }
+
+  let content: Record<string, unknown>;
+  try {
+    content = JSON.parse(contentRaw || "{}") as Record<string, unknown>;
+  } catch {
+    throw new Error("content_json harus valid JSON.");
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase.from("cms_page_sections").upsert(
+    {
+      page_id: pageId,
+      section_key: sectionKey,
+      section_type: sectionType,
+      title: title || null,
+      subtitle: subtitle || null,
+      content,
+      is_visible: isVisible,
+      sort_order: sortOrder,
+      updated_by: access.userId,
+      created_by: access.userId,
+    },
+    { onConflict: "page_id,section_key" },
+  );
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/admin/cms/pages");
+}
+
+export async function upsertCmsBlockAction(formData: FormData) {
+  const access = await requireAdminAccess();
+  if (!access.isSuperAdmin) {
+    throw new Error("Hanya super admin yang dapat mengubah CMS blocks.");
+  }
+
+  const sectionId = String(formData.get("section_id") ?? "").trim();
+  const blockKey = String(formData.get("block_key") ?? "").trim();
+  const blockType = String(formData.get("block_type") ?? "").trim();
+  const isVisible = formData.get("is_visible") === "on";
+  const sortOrderRaw = String(formData.get("sort_order") ?? "0").trim();
+  const payloadRaw = String(formData.get("payload_json") ?? "{}").trim();
+
+  if (!sectionId || !blockKey || !blockType) {
+    throw new Error("section_id, block_key, dan block_type wajib diisi.");
+  }
+
+  const sortOrder = Number.parseInt(sortOrderRaw || "0", 10);
+  if (Number.isNaN(sortOrder)) {
+    throw new Error("sort_order harus berupa angka.");
+  }
+
+  let payload: Record<string, unknown>;
+  try {
+    payload = JSON.parse(payloadRaw || "{}") as Record<string, unknown>;
+  } catch {
+    throw new Error("payload_json harus valid JSON.");
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase.from("cms_page_blocks").upsert(
+    {
+      section_id: sectionId,
+      block_key: blockKey,
+      block_type: blockType,
+      payload,
+      is_visible: isVisible,
+      sort_order: sortOrder,
+      updated_by: access.userId,
+      created_by: access.userId,
+    },
+    { onConflict: "section_id,block_key" },
+  );
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/admin/cms/pages");
+}
+
 export async function uploadCmsMediaAction(formData: FormData) {
   const access = await requireAdminAccess();
   if (!access.isSuperAdmin) {
