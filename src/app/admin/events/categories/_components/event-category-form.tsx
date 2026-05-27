@@ -115,7 +115,7 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
   );
 
   return (
-    <form action={action} className="grid grid-cols-1 gap-4">
+    <form action={action} className="flex w-full flex-col gap-4">
       <input type="hidden" name="event_id" value={eventId} />
       {defaults.categoryId ? <input type="hidden" name="category_id" value={defaults.categoryId} /> : null}
       <input type="hidden" name="name" value={categoryName} />
