@@ -269,7 +269,7 @@ export async function deleteCmsMediaAction(formData: FormData) {
 export async function createEventAction(formData: FormData) {
   const access = await requireAdminAccess();
   if (!access.isSuperAdmin) {
-    throw new Error("Hanya super admin yang dapat membuat event.");
+    redirect("/admin/events?error=unauthorized");
   }
 
   const name = String(formData.get("name") ?? "").trim();
@@ -287,15 +287,15 @@ export async function createEventAction(formData: FormData) {
     .filter((entry): entry is File => entry instanceof File && entry.size > 0);
 
   if (!name || !province || !city || !startDate || !endDate) {
-    throw new Error("Nama event, provinsi, kabupaten/kota, tanggal mulai, dan tanggal selesai wajib diisi.");
+    redirect("/admin/events?error=required_fields");
   }
 
   if (!["draft", "published", "archived"].includes(status)) {
-    throw new Error("Status event tidak valid.");
+    redirect("/admin/events?error=invalid_status");
   }
 
   if (bannerFiles.length > 5) {
-    throw new Error("Maksimal 5 banner per event.");
+    redirect("/admin/events?error=max_banners");
   }
 
   if (!slug) {
@@ -307,7 +307,7 @@ export async function createEventAction(formData: FormData) {
     .replace(/--+/g, "-")
     .replace(/^-|-$/g, "");
   if (!slug) {
-    throw new Error("Slug event tidak valid.");
+    redirect("/admin/events?error=invalid_slug");
   }
 
   const startAt = /^\d{4}-\d{2}-\d{2}$/.test(startDate) ? `${startDate}T00:00:00+07:00` : startDate;
@@ -315,24 +315,43 @@ export async function createEventAction(formData: FormData) {
 
   const supabase = await createSupabaseServerClient();
   const eventCity = `${city}, ${province}`;
-  const { data: insertedEvent, error } = await supabase
-    .from("events")
-    .insert({
-      name,
-      slug,
-      city: eventCity,
-      venue: organizer || null,
-      venue_map_url: venueMapUrl || null,
-      start_at: startAt,
-      end_at: endAt,
-      status,
-      is_featured: isFeatured,
-    })
-    .select("id")
-    .single();
+  const eventPayload = {
+    name,
+    slug,
+    city: eventCity,
+    venue: organizer || null,
+    venue_map_url: venueMapUrl || null,
+    start_at: startAt,
+    end_at: endAt,
+    status,
+    is_featured: isFeatured,
+  };
+
+  let { data: insertedEvent, error } = await supabase.from("events").insert(eventPayload).select("id").single();
+
+  // Backward-compatible fallback in case DB migration 015 has not been applied yet.
+  if (error && error.message.toLowerCase().includes("venue_map_url")) {
+    ({ data: insertedEvent, error } = await supabase
+      .from("events")
+      .insert({
+        name,
+        slug,
+        city: eventCity,
+        venue: organizer || null,
+        start_at: startAt,
+        end_at: endAt,
+        status,
+        is_featured: isFeatured,
+      })
+      .select("id")
+      .single());
+  }
 
   if (error) {
-    throw new Error(error.message);
+    if (error.message.toLowerCase().includes("duplicate key")) {
+      redirect("/admin/events?error=duplicate_slug");
+    }
+    redirect("/admin/events?error=create_failed");
   }
 
   if (insertedEvent && bannerFiles.length > 0) {
@@ -348,7 +367,8 @@ export async function createEventAction(formData: FormData) {
       });
 
       if (uploadError) {
-        throw new Error(`Gagal upload banner: ${uploadError.message}`);
+        console.error("Gagal upload banner:", uploadError.message);
+        redirect("/admin/events?error=banner_upload_failed");
       }
 
       const { data: publicUrlData } = supabase.storage.from("event-banners").getPublicUrl(objectPath);
@@ -366,11 +386,13 @@ export async function createEventAction(formData: FormData) {
       });
 
       if (insertBannerError) {
-        throw new Error(`Gagal simpan metadata banner: ${insertBannerError.message}`);
+        console.error("Gagal simpan metadata banner:", insertBannerError.message);
+        redirect("/admin/events?error=banner_metadata_failed");
       }
     }
   }
 
   revalidatePath("/admin");
   revalidatePath("/admin/events");
+  redirect("/admin/events?created=1");
 }
