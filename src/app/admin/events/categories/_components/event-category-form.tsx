@@ -10,6 +10,8 @@ type PrizeItem = {
 type EventCategoryFormDefaults = {
   categoryId?: string;
   noPertandingan: string;
+  ageGroup: string;
+  genderCategory: string;
   slug: string;
   description: string;
   participantCount: number | null;
@@ -36,17 +38,15 @@ type EventCategoryFormProps = {
 };
 
 const MATCH_OPTIONS = [
-  "Ganda Open Tournament",
-  "Tunggal Open Tournament",
-  "Ganda Putra",
-  "Ganda Putri",
-  "Ganda Campuran",
-  "Tunggal Putra",
-  "Tunggal Putri",
-  "Tunggal Campuran",
+  "Open Tournament",
+  "Tingkat Nasional",
+  "Tingkat Provinsi",
+  "Tingkat Kabupaten/Kota",
+  "Amatir",
   "Beregu",
-  "Fun Game",
 ] as const;
+const AGE_OPTIONS = ["Bebas", "U-25", "O+25"] as const;
+const GENDER_OPTIONS = ["Putra", "Putri"] as const;
 
 const REQUIRED_PRIZE_LABELS = ["Juara 1", "Juara 2", "Juara 3", "Juara 4"] as const;
 const OPTIONAL_PRIZE_LABELS = ["Juara 5 - 8", "Juara 9 - 16", "Juara 17 - 32", "Juara 33 - 64"] as const;
@@ -59,21 +59,10 @@ function toSlug(value: string) {
     .replace(/^-|-$/g, "");
 }
 
-function detectParticipantUnit(matchName: string) {
-  const lower = matchName.toLowerCase();
-  if (lower.includes("ganda")) return "pasang";
-  if (lower.includes("tunggal")) return "athlet";
-  return "peserta";
-}
-
-function participantUnitLabel(unit: string) {
-  if (unit === "pasang") return "Pasang";
-  if (unit === "athlet") return "Athlet";
-  return "Peserta";
-}
-
 export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEdit = false }: EventCategoryFormProps) {
   const initialMatchName = defaults.noPertandingan || MATCH_OPTIONS[0];
+  const initialAgeGroup = defaults.ageGroup || AGE_OPTIONS[0];
+  const initialGenderCategory = defaults.genderCategory || GENDER_OPTIONS[0];
   const matchOptions = useMemo(() => {
     if (MATCH_OPTIONS.includes(initialMatchName as (typeof MATCH_OPTIONS)[number])) {
       return MATCH_OPTIONS;
@@ -81,10 +70,9 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
     return [initialMatchName, ...MATCH_OPTIONS] as const;
   }, [initialMatchName]);
   const [noPertandingan, setNoPertandingan] = useState(initialMatchName);
+  const [ageGroup, setAgeGroup] = useState(initialAgeGroup);
+  const [genderCategory, setGenderCategory] = useState(initialGenderCategory);
   const [slug, setSlug] = useState(defaults.slug || toSlug(initialMatchName));
-  const [participantCount, setParticipantCount] = useState(
-    defaults.participantCount !== null && defaults.participantCount !== undefined ? String(defaults.participantCount) : "",
-  );
   const [visibleOptionalPrizeCount, setVisibleOptionalPrizeCount] = useState(() => {
     let count = 0;
     for (const label of OPTIONAL_PRIZE_LABELS) {
@@ -109,8 +97,7 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
     return object;
   });
 
-  const currentParticipantUnit = detectParticipantUnit(noPertandingan);
-  const currentParticipantUnitLabel = participantUnitLabel(currentParticipantUnit);
+  const categoryName = `${noPertandingan} - ${ageGroup} - ${genderCategory}`;
 
   const visibleOptionalLabels = OPTIONAL_PRIZE_LABELS.slice(0, visibleOptionalPrizeCount);
   const canAddMoreOptionalPrize = visibleOptionalPrizeCount < OPTIONAL_PRIZE_LABELS.length;
@@ -131,8 +118,12 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
     <form action={action} className="grid gap-4 md:grid-cols-2">
       <input type="hidden" name="event_id" value={eventId} />
       {defaults.categoryId ? <input type="hidden" name="category_id" value={defaults.categoryId} /> : null}
+      <input type="hidden" name="name" value={categoryName} />
       <input type="hidden" name="slug" value={slug} />
-      <input type="hidden" name="participant_unit" value={currentParticipantUnit} />
+      <input type="hidden" name="age_group" value={ageGroup} />
+      <input type="hidden" name="gender_category" value={genderCategory} />
+      <input type="hidden" name="participant_count" value={String(defaults.participantCount ?? 1)} />
+      <input type="hidden" name="participant_unit" value={defaults.participantUnit || "peserta"} />
       <input type="hidden" name="prize_breakdown_json" value={serializedPrizeBreakdown} />
 
       <h3 className="text-base font-bold text-[#111827] md:col-span-2">A. Identitas Pertandingan</h3>
@@ -141,7 +132,6 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
         1. No Pertandingan
         <select
           required
-          name="name"
           value={noPertandingan}
           onChange={(event) => {
             const value = event.target.value;
@@ -159,7 +149,39 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
       </label>
 
       <label className="text-sm font-semibold text-[#374151]">
-        2. Slug (otomatis)
+        2. Batas Usia
+        <select
+          required
+          value={ageGroup}
+          onChange={(event) => setAgeGroup(event.target.value)}
+          className="mt-1 w-full rounded-lg border border-[#d1d5db] px-3 py-2"
+        >
+          {AGE_OPTIONS.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="text-sm font-semibold text-[#374151]">
+        3. Jenis Kelamin
+        <select
+          required
+          value={genderCategory}
+          onChange={(event) => setGenderCategory(event.target.value)}
+          className="mt-1 w-full rounded-lg border border-[#d1d5db] px-3 py-2"
+        >
+          {GENDER_OPTIONS.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="text-sm font-semibold text-[#374151]">
+        Slug (otomatis)
         <input
           readOnly
           value={slug}
@@ -167,17 +189,12 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
         />
       </label>
 
-      <label className="text-sm font-semibold text-[#374151]">
-        3. Jumlah Peserta ({currentParticipantUnitLabel})
+      <label className="text-sm font-semibold text-[#374151] md:col-span-2">
+        Label Kategori (otomatis)
         <input
-          required
-          name="participant_count"
-          type="number"
-          min={1}
-          value={participantCount}
-          onChange={(event) => setParticipantCount(event.target.value)}
-          placeholder="Masukkan jumlah peserta"
-          className="mt-1 w-full rounded-lg border border-[#d1d5db] px-3 py-2"
+          readOnly
+          value={categoryName}
+          className="mt-1 w-full rounded-lg border border-[#d1d5db] bg-[#f9fafb] px-3 py-2 text-[#6b7280]"
         />
       </label>
 

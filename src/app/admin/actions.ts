@@ -479,6 +479,8 @@ export async function upsertEventCategoryAction(formData: FormData) {
 
   const categoryId = String(formData.get("category_id") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
+  const ageGroupRaw = String(formData.get("age_group") ?? "").trim();
+  const genderCategoryRaw = String(formData.get("gender_category") ?? "").trim();
   const slugInput = String(formData.get("slug") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const participantCountRaw = String(formData.get("participant_count") ?? "").trim();
@@ -495,8 +497,16 @@ export async function upsertEventCategoryAction(formData: FormData) {
   const sortOrderRaw = String(formData.get("sort_order") ?? "0").trim();
   const isPublished = formData.get("is_published") === "on";
 
-  if (!eventId || !name || !competitionStartDate || !competitionEndDate || !participantCountRaw) {
+  if (!eventId || !name || !ageGroupRaw || !genderCategoryRaw || !competitionStartDate || !competitionEndDate || !participantCountRaw) {
     redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=required_fields`);
+  }
+
+  const allowedAgeGroups = new Set(["Bebas", "U-25", "O+25"]);
+  const allowedGenderCategories = new Set(["Putra", "Putri"]);
+  const ageGroup = allowedAgeGroups.has(ageGroupRaw) ? ageGroupRaw : null;
+  const genderCategory = allowedGenderCategories.has(genderCategoryRaw) ? genderCategoryRaw : null;
+  if (!ageGroup || !genderCategory) {
+    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=invalid_identity_config`);
   }
 
   const sortOrder = Number.parseInt(sortOrderRaw || "0", 10);
@@ -561,6 +571,8 @@ export async function upsertEventCategoryAction(formData: FormData) {
     description: description || null,
     participant_count: participantCount,
     participant_unit: participantUnit,
+    age_group: ageGroup,
+    gender_category: genderCategory,
     registration_open_at: registrationOpenDate ? normalizeDateInputForStorage(registrationOpenDate) : null,
     registration_close_at: registrationCloseDate ? normalizeDateInputForStorage(registrationCloseDate) : null,
     competition_start_at: competitionStartDate ? normalizeDateInputForStorage(competitionStartDate) : null,

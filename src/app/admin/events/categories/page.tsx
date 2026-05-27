@@ -16,6 +16,8 @@ type EventCategoryRow = {
   name: string;
   slug: string;
   description: string | null;
+  age_group: string | null;
+  gender_category: string | null;
   registration_open_at: string | null;
   registration_close_at: string | null;
   competition_start_at: string | null;
@@ -35,6 +37,18 @@ type AdminEventCategoriesPageProps = {
   searchParams: Promise<{ event_id?: string; saved?: string; deleted?: string; error?: string }>;
 };
 
+function parseCategoryIdentity(name: string, ageGroup: string | null, genderCategory: string | null) {
+  const parts = name
+    .split(" - ")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return {
+    noPertandingan: parts[0] || name,
+    ageGroup: ageGroup ?? parts[1] ?? "Bebas",
+    genderCategory: genderCategory ?? parts[2] ?? "Putra",
+  };
+}
+
 function getErrorMessage(errorCode?: string) {
   if (!errorCode) return null;
   if (errorCode === "unauthorized") return "Akses ditolak. Hanya super_admin yang dapat mengubah kategori pertandingan.";
@@ -42,12 +56,13 @@ function getErrorMessage(errorCode?: string) {
   if (errorCode === "invalid_slug") return "Slug kategori tidak valid.";
   if (errorCode === "duplicate_slug") return "Slug kategori sudah dipakai di event ini.";
   if (errorCode === "invalid_sort_order") return "Sort order harus berupa angka.";
+  if (errorCode === "invalid_identity_config") return "Konfigurasi No Pertandingan, Batas Usia, atau Jenis Kelamin tidak valid.";
   if (errorCode === "invalid_participant_count") return "Jumlah peserta harus lebih dari 0.";
   if (errorCode === "invalid_pairing_config") return "Nilai pairing tidak valid. Gunakan angka 0 atau lebih.";
   if (errorCode === "invalid_prize_config") return "Konfigurasi hadiah tidak valid.";
   if (errorCode === "invalid_registration_window") return "Tanggal selesai pendaftaran tidak boleh lebih awal dari tanggal mulai pendaftaran.";
   if (errorCode === "invalid_competition_window") return "Tanggal selesai pertandingan tidak boleh lebih awal dari tanggal mulai.";
-  if (errorCode === "schema_not_ready") return "Schema database belum siap. Jalankan SQL 016 terlebih dahulu di Supabase.";
+  if (errorCode === "schema_not_ready") return "Schema database belum siap. Jalankan SQL 016 dan SQL 017 terlebih dahulu di Supabase.";
   if (errorCode === "save_failed") return "Gagal menyimpan kategori pertandingan.";
   if (errorCode === "delete_failed") return "Gagal menghapus kategori pertandingan.";
   return "Terjadi kesalahan pada pengelolaan kategori pertandingan.";
@@ -81,7 +96,7 @@ export default async function AdminEventCategoriesPage({ searchParams }: AdminEv
     const { data, error } = await supabase
       .from("event_categories")
       .select(
-        "id, name, slug, description, registration_open_at, registration_close_at, competition_start_at, competition_end_at, participant_count, participant_unit, pairing_zone_count, pairing_cluster_count, pairing_group_count, pairing_table_count, prize_breakdown, is_published, sort_order",
+        "id, name, slug, description, age_group, gender_category, registration_open_at, registration_close_at, competition_start_at, competition_end_at, participant_count, participant_unit, pairing_zone_count, pairing_cluster_count, pairing_group_count, pairing_table_count, prize_breakdown, is_published, sort_order",
       )
       .eq("event_id", selectedEventId)
       .order("sort_order", { ascending: true })
@@ -163,11 +178,13 @@ export default async function AdminEventCategoriesPage({ searchParams }: AdminEv
               eventId={selectedEventId}
               submitLabel="Simpan Kategori"
               defaults={{
-                noPertandingan: "Ganda Open Tournament",
-                slug: "ganda-open-tournament",
+                noPertandingan: "Open Tournament",
+                ageGroup: "Bebas",
+                genderCategory: "Putra",
+                slug: "open-tournament",
                 description: "",
                 participantCount: null,
-                participantUnit: "pasang",
+                participantUnit: "peserta",
                 competitionStartDate: "",
                 competitionEndDate: "",
                 registrationOpenDate: "",
@@ -193,7 +210,9 @@ export default async function AdminEventCategoriesPage({ searchParams }: AdminEv
 
       {selectedEventId && categories.length > 0 ? (
         <section className="space-y-4">
-          {categories.map((category) => (
+          {categories.map((category) => {
+            const identity = parseCategoryIdentity(category.name, category.age_group, category.gender_category);
+            return (
             <article key={category.id} className="rounded-2xl border border-[#e5e7eb] bg-white p-6">
               <EventCategoryForm
                 action={upsertEventCategoryAction}
@@ -202,7 +221,9 @@ export default async function AdminEventCategoriesPage({ searchParams }: AdminEv
                 isEdit
                 defaults={{
                   categoryId: category.id,
-                  noPertandingan: category.name,
+                  noPertandingan: identity.noPertandingan,
+                  ageGroup: identity.ageGroup,
+                  genderCategory: identity.genderCategory,
                   slug: category.slug,
                   description: category.description ?? "",
                   participantCount: category.participant_count,
@@ -239,7 +260,8 @@ export default async function AdminEventCategoriesPage({ searchParams }: AdminEv
                 </form>
               ) : null}
             </article>
-          ))}
+            );
+          })}
         </section>
       ) : null}
 
