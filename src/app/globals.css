@@ -29,9 +29,9 @@ body {
   width: 100%;
 }
 
-@media (min-width: 1280px) {
+@media (min-width: 1024px) {
   .site-frame {
-    width: 70%;
+    width: 80%;
     margin-inline: auto;
   }
 }

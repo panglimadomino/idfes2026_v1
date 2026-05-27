@@ -25,7 +25,7 @@ export function SiteHeader({ headerLogoUrl, eventMenuItems = [] }: SiteHeaderPro
   return (
     <header className="sticky top-0 z-40 w-full">
       <div className="border-b border-black/10 bg-white/95 backdrop-blur">
-        <div className="site-frame grid min-h-16 grid-cols-[1fr_auto] items-center gap-4 px-4 py-2 sm:px-8 md:grid-cols-[1fr_auto_1fr]">
+        <div className="site-frame flex min-h-16 items-center gap-4 px-4 py-2 sm:px-8">
           <Link href="/" className="w-fit">
             <div className="flex items-center">
               {headerLogoUrl ? (
@@ -46,72 +46,71 @@ export function SiteHeader({ headerLogoUrl, eventMenuItems = [] }: SiteHeaderPro
             aria-label="Toggle menu"
             aria-expanded={open}
             onClick={() => setOpen((prev) => !prev)}
-            className="grid h-10 w-10 place-content-center rounded-md border border-black/20 text-black md:hidden"
+            className="ml-auto grid h-10 w-10 place-content-center rounded-md border border-black/20 text-black md:hidden"
           >
             <span className="block h-0.5 w-5 bg-black" />
             <span className="mt-1.5 block h-0.5 w-5 bg-black" />
             <span className="mt-1.5 block h-0.5 w-5 bg-black" />
           </button>
 
-          <nav className="hidden items-center gap-2 md:flex">
-            <Link
-              href="/"
-              onClick={() => setOpen(false)}
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                isActive(pathname, "/") ? "text-black" : "text-black/70 hover:text-black"
-              }`}
-            >
-              Beranda
-            </Link>
-
-            <div className="group relative">
+          <div className="ml-auto hidden items-center justify-end gap-3 md:flex">
+            <nav className="flex items-center justify-end gap-2 text-right">
               <Link
-                href="/#id-fes-2026"
+                href="/"
                 onClick={() => setOpen(false)}
-                className={`inline-flex items-center gap-1 rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  pathname === "/" || isActive(pathname, "/event") || isActive(pathname, "/events")
-                    ? "text-black"
-                    : "text-black/70 hover:text-black"
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  isActive(pathname, "/") ? "text-black" : "text-black/70 hover:text-black"
                 }`}
               >
-                ID Fes 2026
-                <span className="text-[10px]">▼</span>
+                Beranda
               </Link>
 
-              {eventMenuItems.length > 0 ? (
-                <div className="invisible absolute left-0 top-full z-20 mt-1 min-w-[220px] rounded-xl border border-black/10 bg-white p-2 opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
-                  {eventMenuItems.map((item, index) => (
-                    <Link
-                      key={`${item.href}-${index}`}
-                      href={item.href}
-                      onClick={() => setOpen(false)}
-                      className="block rounded-lg px-3 py-2 text-sm font-semibold text-black/80 hover:bg-black/5 hover:text-black"
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-
-            {mainNavItems.map((item) => {
-              const active = isActive(pathname, item.href);
-              return (
+              <div className="group relative">
                 <Link
-                  key={item.href}
-                  href={item.href}
+                  href="/#id-fes-2026"
                   onClick={() => setOpen(false)}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                    active ? "text-black" : "text-black/70 hover:text-black"
+                  className={`inline-flex items-center gap-1 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    pathname === "/" || isActive(pathname, "/event") || isActive(pathname, "/events")
+                      ? "text-black"
+                      : "text-black/70 hover:text-black"
                   }`}
                 >
-                  {item.label}
+                  ID Fes 2026
+                  <span className="text-[10px]">v</span>
                 </Link>
-              );
-            })}
-          </nav>
 
-          <div className="hidden justify-end md:flex">
+                {eventMenuItems.length > 0 ? (
+                  <div className="invisible absolute right-0 top-full z-20 mt-1 min-w-[220px] rounded-xl border border-black/10 bg-white p-2 opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+                    {eventMenuItems.map((item, index) => (
+                      <Link
+                        key={`${item.href}-${index}`}
+                        href={item.href}
+                        onClick={() => setOpen(false)}
+                        className="block rounded-lg px-3 py-2 text-sm font-semibold text-black/80 hover:bg-black/5 hover:text-black"
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
+              {mainNavItems.map((item) => {
+                const active = isActive(pathname, item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setOpen(false)}
+                    className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                      active ? "text-black" : "text-black/70 hover:text-black"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </nav>
             <Link href="/login" className="rounded-sm bg-black px-4 py-2 text-xs font-bold text-white">
               Masuk
             </Link>

@@ -40,7 +40,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section id="id-fes-2026" className="site-frame px-6 py-16">
+      <section id="id-fes-2026" className="site-frame px-6 py-16 pb-24">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 className="font-title text-5xl uppercase leading-none text-[var(--ink-strong)]">ID Fes 2026</h2>
@@ -56,17 +56,19 @@ export default async function HomePage() {
             {publishedEvents.map((event) => (
               <article
                 key={event.id}
-                className="snap-start rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-5 shadow-sm"
+                className="snap-start rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-5 shadow-sm min-h-[26rem] md:min-h-[28rem] flex flex-col justify-between"
               >
-                <p className="text-xs font-bold uppercase tracking-wide text-[var(--ink-soft)]">
-                  {extractProvinceLabel(event.city, event.name)}
-                </p>
-                <h3 className="mt-2 text-2xl font-bold text-[var(--ink-strong)]">{event.name}</h3>
-                <p className="mt-2 text-sm text-[var(--ink-soft)]">
-                  {formatDate(event.start_at)} - {formatDate(event.end_at)}
-                </p>
-                <p className="mt-1 text-sm text-[var(--ink-soft)]">{event.city ?? "-"}</p>
-                <div className="mt-4">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-[var(--ink-soft)]">
+                    {extractProvinceLabel(event.city, event.name)}
+                  </p>
+                  <h3 className="mt-2 text-2xl font-bold text-[var(--ink-strong)]">{event.name}</h3>
+                  <p className="mt-2 text-sm text-[var(--ink-soft)]">
+                    {formatDate(event.start_at)} - {formatDate(event.end_at)}
+                  </p>
+                  <p className="mt-1 text-sm text-[var(--ink-soft)]">{event.city ?? "-"}</p>
+                </div>
+                <div className="mt-6">
                   <Link
                     href={`/events/${event.slug}`}
                     className="inline-flex rounded-full border border-black px-4 py-2 text-sm font-semibold text-black hover:bg-black hover:text-white"
@@ -84,7 +86,8 @@ export default async function HomePage() {
         )}
       </section>
 
-      <section className="site-frame px-6 py-16">
+      <section className="border-t border-black/10 bg-white">
+        <div className="site-frame px-6 py-24">
         <div className="text-center">
           <h2 className="text-6xl font-bold text-black">Race Results</h2>
           <div className="mt-8 flex flex-wrap justify-center gap-6">
@@ -98,6 +101,7 @@ export default async function HomePage() {
               </button>
             ))}
           </div>
+        </div>
         </div>
       </section>
 
