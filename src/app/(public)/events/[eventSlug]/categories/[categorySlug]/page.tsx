@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { formatDateId } from "@/lib/date-id";
 import { createSupabaseClient } from "@/lib/supabase/client";
 import { getPublishedEventBySlug } from "@/lib/public-events";
 
@@ -30,7 +31,7 @@ export default async function CategoryDetailPage({ params }: Props) {
         <p className="mt-3 text-[var(--ink-soft)]">
           Match Start:{" "}
           {category.competition_start_at
-            ? new Date(category.competition_start_at).toLocaleDateString("id-ID", { dateStyle: "full" })
+            ? formatDateId(category.competition_start_at, { dateStyle: "full" })
             : "Belum ditentukan"}
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
@@ -61,8 +62,8 @@ export default async function CategoryDetailPage({ params }: Props) {
         <article className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-5">
           <h2 className="text-sm font-bold uppercase text-[var(--ink-soft)]">Periode Kategori</h2>
           <p className="mt-2 text-sm text-[var(--ink-soft)]">
-            {category.competition_start_at ? new Date(category.competition_start_at).toLocaleDateString("id-ID") : "-"} -{" "}
-            {category.competition_end_at ? new Date(category.competition_end_at).toLocaleDateString("id-ID") : "-"}
+            {category.competition_start_at ? formatDateId(category.competition_start_at) : "-"} -{" "}
+            {category.competition_end_at ? formatDateId(category.competition_end_at) : "-"}
           </p>
         </article>
       </section>

@@ -1,6 +1,7 @@
 import { createEventAction } from "@/app/admin/actions";
 import { EventCreateForm } from "@/app/admin/events/_components/event-create-form";
 import { requireAdminAccess } from "@/lib/auth/server";
+import { formatDateId } from "@/lib/date-id";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type EventRow = {
@@ -102,7 +103,7 @@ export default async function AdminEventsPage({ searchParams }: AdminEventsPageP
                   <td className="px-4 py-3">{event.city ?? "-"}</td>
                   <td className="px-4 py-3">{event.venue ?? "-"}</td>
                   <td className="px-4 py-3">
-                    {new Date(event.start_at).toLocaleDateString("id-ID")} - {new Date(event.end_at).toLocaleDateString("id-ID")}
+                    {formatDateId(event.start_at)} - {formatDateId(event.end_at)}
                   </td>
                   <td className="px-4 py-3">{event.status}</td>
                 </tr>

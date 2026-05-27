@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatDateId } from "@/lib/date-id";
 import { getPublishedNews } from "@/lib/public-events";
 
 export default async function BeritaPage() {
@@ -15,7 +16,7 @@ export default async function BeritaPage() {
         {newsItems.map((item) => (
           <article key={item.id} className="rounded-3xl border border-[var(--line-soft)] bg-white p-6">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--ink-soft)]">
-              {item.published_at ? new Date(item.published_at).toLocaleDateString("id-ID") : "-"}
+              {item.published_at ? formatDateId(item.published_at) : "-"}
             </p>
             <h2 className="mt-2 text-2xl font-bold text-[var(--ink-strong)]">{item.title}</h2>
             <p className="mt-3 text-[var(--ink-soft)]">{item.summary ?? "Ringkasan artikel belum tersedia."}</p>

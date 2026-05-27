@@ -1,5 +1,6 @@
 import { updateEventScheduleAction } from "@/app/admin/actions";
 import { requireAdminAccess } from "@/lib/auth/server";
+import { toDateInputValueId } from "@/lib/date-id";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type EventRow = {
@@ -27,12 +28,6 @@ function getErrorMessage(errorCode?: string) {
   if (errorCode === "duplicate_slug") return "Slug sudah dipakai event lain.";
   if (errorCode === "update_failed") return "Gagal update event. Coba lagi.";
   return "Terjadi kesalahan saat update event.";
-}
-
-function toDateInputValue(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toISOString().slice(0, 10);
 }
 
 export default async function AdminEventSchedulePage({ searchParams }: AdminEventSchedulePageProps) {
@@ -137,7 +132,7 @@ export default async function AdminEventSchedulePage({ searchParams }: AdminEven
                     required
                     name="start_date"
                     type="date"
-                    defaultValue={toDateInputValue(event.start_at)}
+                    defaultValue={toDateInputValueId(event.start_at)}
                     className="mt-1 w-full rounded-lg border border-[#d1d5db] px-3 py-2"
                   />
                 </label>
@@ -148,7 +143,7 @@ export default async function AdminEventSchedulePage({ searchParams }: AdminEven
                     required
                     name="end_date"
                     type="date"
-                    defaultValue={toDateInputValue(event.end_at)}
+                    defaultValue={toDateInputValueId(event.end_at)}
                     className="mt-1 w-full rounded-lg border border-[#d1d5db] px-3 py-2"
                   />
                 </label>

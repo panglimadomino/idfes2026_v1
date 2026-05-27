@@ -1,9 +1,6 @@
 import Link from "next/link";
+import { formatDateId } from "@/lib/date-id";
 import { extractProvinceLabel, getPublishedEvents } from "@/lib/public-events";
-
-function formatDate(value: string) {
-  return new Date(value).toLocaleDateString("id-ID");
-}
 
 export default async function EventPage() {
   const events = await getPublishedEvents(100);
@@ -28,7 +25,7 @@ export default async function EventPage() {
                 <span className="rounded-full bg-[var(--surface-muted)] px-3 py-1 text-xs font-bold text-[var(--ink-strong)]">Published</span>
               </div>
               <p className="mt-3 text-sm text-[var(--ink-soft)]">
-                {formatDate(event.start_at)} - {formatDate(event.end_at)} | {event.venue ?? "-"}
+                {formatDateId(event.start_at)} - {formatDateId(event.end_at)} | {event.venue ?? "-"}
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <Link

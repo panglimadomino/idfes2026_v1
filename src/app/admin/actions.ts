@@ -6,6 +6,12 @@ import { requireAdminAccess } from "@/lib/auth/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+function normalizeDateInputForStorage(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  // Store at noon UTC to avoid off-by-one shifts across timezone conversions.
+  return `${value}T12:00:00.000Z`;
+}
+
 export async function signOutAdminAction() {
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut();
@@ -310,8 +316,8 @@ export async function createEventAction(formData: FormData) {
     redirect("/admin/events?error=invalid_slug");
   }
 
-  const startAt = /^\d{4}-\d{2}-\d{2}$/.test(startDate) ? `${startDate}T00:00:00+07:00` : startDate;
-  const endAt = /^\d{4}-\d{2}-\d{2}$/.test(endDate) ? `${endDate}T23:59:59+07:00` : endDate;
+  const startAt = normalizeDateInputForStorage(startDate);
+  const endAt = normalizeDateInputForStorage(endDate);
 
   const supabase = await createSupabaseServerClient();
   const eventCity = `${city}, ${province}`;
@@ -431,8 +437,8 @@ export async function updateEventScheduleAction(formData: FormData) {
     redirect("/admin/events/schedule?error=invalid_slug");
   }
 
-  const startAt = /^\d{4}-\d{2}-\d{2}$/.test(startDate) ? `${startDate}T00:00:00+07:00` : startDate;
-  const endAt = /^\d{4}-\d{2}-\d{2}$/.test(endDate) ? `${endDate}T23:59:59+07:00` : endDate;
+  const startAt = normalizeDateInputForStorage(startDate);
+  const endAt = normalizeDateInputForStorage(endDate);
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase

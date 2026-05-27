@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { formatDateId } from "@/lib/date-id";
 import {
   extractProvinceLabel,
   getPublishedCategoriesByEventId,
@@ -24,7 +25,7 @@ export default async function EventDetailPage({ params }: Props) {
         <p className="text-sm font-semibold uppercase tracking-wide text-[var(--ink-soft)]">{extractProvinceLabel(event.city, event.name)}</p>
         <h1 className="font-title text-6xl uppercase leading-none text-[var(--ink-strong)]">{event.name}</h1>
         <p className="mt-3 max-w-3xl text-[var(--ink-soft)]">
-          {new Date(event.start_at).toLocaleDateString("id-ID")} - {new Date(event.end_at).toLocaleDateString("id-ID")} |{" "}
+          {formatDateId(event.start_at)} - {formatDateId(event.end_at)} |{" "}
           {event.venue ?? "-"}
         </p>
       </section>
@@ -44,7 +45,7 @@ export default async function EventDetailPage({ params }: Props) {
                 <p className="mt-2 text-sm text-[var(--ink-soft)]">{category.description ?? "Kategori event."}</p>
                 <p className="mt-2 text-sm text-[var(--ink-soft)]">
                   {category.competition_start_at
-                    ? new Date(category.competition_start_at).toLocaleDateString("id-ID")
+                    ? formatDateId(category.competition_start_at)
                     : "Tanggal belum ditentukan"}
                 </p>
                 <Link
@@ -70,7 +71,7 @@ export default async function EventDetailPage({ params }: Props) {
             {news.map((item) => (
               <article key={item.id} className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-5">
                 <p className="text-xs font-bold uppercase text-[var(--ink-soft)]">
-                  {item.published_at ? new Date(item.published_at).toLocaleDateString("id-ID") : "-"}
+                  {item.published_at ? formatDateId(item.published_at) : "-"}
                 </p>
                 <h3 className="mt-2 text-lg font-bold text-[var(--ink-strong)]">{item.title}</h3>
                 <p className="mt-2 text-sm text-[var(--ink-soft)]">{item.summary ?? "-"}</p>
