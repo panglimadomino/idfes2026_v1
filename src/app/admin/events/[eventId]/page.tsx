@@ -96,9 +96,17 @@ export default async function AdminEventDetailPage({ params }: AdminEventDetailP
             <h1 className="font-title text-5xl uppercase leading-none">Detail Event</h1>
             <p className="mt-2 text-sm text-[#6b7280]">{eventRow.name}</p>
           </div>
-          <Link href="/admin/events" className="rounded-lg border border-[#d1d5db] px-4 py-2 text-sm font-semibold text-[#111827]">
-            Kembali ke List Event
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={`/admin/events/schedule?manage_event_id=${eventRow.id}#event-${eventRow.id}`}
+              className="rounded-lg bg-[#111827] px-4 py-2 text-sm font-semibold text-white"
+            >
+              Buat Pertandingan
+            </Link>
+            <Link href="/admin/events" className="rounded-lg border border-[#d1d5db] px-4 py-2 text-sm font-semibold text-[#111827]">
+              Kembali ke List Event
+            </Link>
+          </div>
         </div>
       </section>
 
