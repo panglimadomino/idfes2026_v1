@@ -153,20 +153,25 @@ export async function getPublishedCategoriesByEventId(eventId: string): Promise<
       .eq("is_published", true)
       .order("sort_order", { ascending: true })
       .limit(30);
-    let { data, error } = await query;
+    const primaryResult = await query;
+    let rawData = (primaryResult.data ?? null) as Array<Record<string, unknown>> | null;
+    let errorMessage = primaryResult.error?.message ?? null;
 
-    if (error && String(error.message ?? "").toLowerCase().includes("registration_fee")) {
-      ({ data, error } = await supabase
+    if (errorMessage && errorMessage.toLowerCase().includes("registration_fee")) {
+      const fallbackResult = await supabase
         .from("event_categories")
         .select(selectWithoutFee)
         .eq("event_id", eventId)
         .eq("is_published", true)
         .order("sort_order", { ascending: true })
-        .limit(30));
+        .limit(30);
+
+      rawData = (fallbackResult.data ?? null) as Array<Record<string, unknown>> | null;
+      errorMessage = fallbackResult.error?.message ?? null;
     }
 
-    if (error || !data) return [];
-    return (data as Array<Record<string, unknown>>).map((item) => ({
+    if (errorMessage || !rawData) return [];
+    return rawData.map((item) => ({
       id: String(item.id ?? ""),
       name: String(item.name ?? ""),
       slug: String(item.slug ?? ""),
