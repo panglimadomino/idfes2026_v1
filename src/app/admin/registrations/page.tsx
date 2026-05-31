@@ -4,6 +4,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 type RegistrationRow = {
   id: string;
   registration_code: string;
+  event_id: string;
+  category_id: string;
   full_name: string;
   whatsapp: string;
   payment_status: string;
@@ -11,15 +13,27 @@ type RegistrationRow = {
   submitted_at: string;
 };
 
-export default async function AdminRegistrationsPage() {
-  await requireAdminAccess();
-  const supabase = await createSupabaseServerClient();
+type AdminRegistrationsPageProps = {
+  searchParams: Promise<{ event_id?: string; category_id?: string }>;
+};
 
-  const { data, error } = await supabase
+export default async function AdminRegistrationsPage({ searchParams }: AdminRegistrationsPageProps) {
+  await requireAdminAccess();
+  const params = await searchParams;
+  const supabase = await createSupabaseServerClient();
+  const eventId = String(params.event_id ?? "").trim();
+  const categoryId = String(params.category_id ?? "").trim();
+
+  let query = supabase
     .from("registrations")
-    .select("id, registration_code, full_name, whatsapp, payment_status, verification_status, submitted_at")
+    .select("id, registration_code, event_id, category_id, full_name, whatsapp, payment_status, verification_status, submitted_at")
     .order("submitted_at", { ascending: false })
-    .limit(50);
+    .limit(100);
+
+  if (eventId) query = query.eq("event_id", eventId);
+  if (categoryId) query = query.eq("category_id", categoryId);
+
+  const { data, error } = await query;
 
   const rows = (data ?? []) as RegistrationRow[];
 
@@ -28,6 +42,13 @@ export default async function AdminRegistrationsPage() {
       <section className="rounded-2xl border border-[#e5e7eb] bg-white p-6">
         <h1 className="font-title text-5xl uppercase leading-none">Registrasi Peserta</h1>
         <p className="mt-2 text-sm text-[#6b7280]">Pantau status pembayaran dan verifikasi pendaftaran.</p>
+        {eventId || categoryId ? (
+          <p className="mt-2 text-xs text-[#6b7280]">
+            Filter aktif:
+            {eventId ? ` event_id=${eventId}` : ""}
+            {categoryId ? ` | category_id=${categoryId}` : ""}
+          </p>
+        ) : null}
       </section>
 
       {error ? (
@@ -43,6 +64,8 @@ export default async function AdminRegistrationsPage() {
               <tr>
                 <th className="px-4 py-3">Kode</th>
                 <th className="px-4 py-3">Nama</th>
+                <th className="px-4 py-3">Event</th>
+                <th className="px-4 py-3">Pertandingan</th>
                 <th className="px-4 py-3">WhatsApp</th>
                 <th className="px-4 py-3">Payment</th>
                 <th className="px-4 py-3">Verifikasi</th>
@@ -54,6 +77,8 @@ export default async function AdminRegistrationsPage() {
                 <tr key={registration.id} className="border-t border-[#f1f5f9]">
                   <td className="px-4 py-3 font-semibold">{registration.registration_code}</td>
                   <td className="px-4 py-3">{registration.full_name}</td>
+                  <td className="px-4 py-3">{registration.event_id}</td>
+                  <td className="px-4 py-3">{registration.category_id}</td>
                   <td className="px-4 py-3">{registration.whatsapp}</td>
                   <td className="px-4 py-3">{registration.payment_status}</td>
                   <td className="px-4 py-3">{registration.verification_status}</td>
@@ -62,7 +87,7 @@ export default async function AdminRegistrationsPage() {
               ))}
               {rows.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-4 text-[#6b7280]" colSpan={6}>
+                  <td className="px-4 py-4 text-[#6b7280]" colSpan={8}>
                     Belum ada data registrasi.
                   </td>
                 </tr>

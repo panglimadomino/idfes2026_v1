@@ -73,6 +73,7 @@ function getErrorMessage(errorCode?: string) {
   if (errorCode === "unauthorized") return "Akses ditolak. Hanya super_admin yang dapat mengubah event.";
   if (errorCode === "required_fields") return "Field wajib belum lengkap.";
   if (errorCode === "invalid_status") return "Status event tidak valid.";
+  if (errorCode === "event_requires_match") return "Event harus memiliki minimal 1 pertandingan sebelum status diubah ke published.";
   if (errorCode === "invalid_slug") return "Slug event tidak valid.";
   if (errorCode === "duplicate_slug") return "Slug sudah dipakai event lain.";
   if (errorCode === "update_failed") return "Gagal update event. Coba lagi.";

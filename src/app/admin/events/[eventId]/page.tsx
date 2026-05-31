@@ -26,6 +26,10 @@ type EventCategoryRow = {
   is_published: boolean;
 };
 
+type CategoryCountRow = {
+  category_id: string | null;
+};
+
 type AdminEventDetailPageProps = {
   params: Promise<{ eventId: string }>;
 };
@@ -52,6 +56,34 @@ export default async function AdminEventDetailPage({ params }: AdminEventDetailP
 
   const eventRow = event as EventRow;
   const categoryRows = (categories ?? []) as EventCategoryRow[];
+  const categoryIds = categoryRows.map((category) => category.id);
+
+  const adminCountMap = new Map<string, number>();
+  const participantCountMap = new Map<string, number>();
+
+  if (categoryIds.length > 0) {
+    const [{ data: adminRows }, { data: participantRows }] = await Promise.all([
+      supabase
+        .from("admin_category_access")
+        .select("category_id")
+        .eq("event_id", eventRow.id)
+        .eq("is_active", true)
+        .in("category_id", categoryIds),
+      supabase.from("registrations").select("category_id").eq("event_id", eventRow.id).in("category_id", categoryIds),
+    ]);
+
+    for (const row of ((adminRows ?? []) as CategoryCountRow[])) {
+      const categoryId = row.category_id ?? "";
+      if (!categoryId) continue;
+      adminCountMap.set(categoryId, (adminCountMap.get(categoryId) ?? 0) + 1);
+    }
+
+    for (const row of ((participantRows ?? []) as CategoryCountRow[])) {
+      const categoryId = row.category_id ?? "";
+      if (!categoryId) continue;
+      participantCountMap.set(categoryId, (participantCountMap.get(categoryId) ?? 0) + 1);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -131,6 +163,8 @@ export default async function AdminEventDetailPage({ params }: AdminEventDetailP
                 <th className="px-4 py-3">Slug</th>
                 <th className="px-4 py-3">Periode</th>
                 <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Admin</th>
+                <th className="px-4 py-3">Peserta</th>
                 <th className="px-4 py-3">Aksi</th>
               </tr>
             </thead>
@@ -144,19 +178,35 @@ export default async function AdminEventDetailPage({ params }: AdminEventDetailP
                     {category.competition_end_at ? formatDateId(category.competition_end_at) : "-"}
                   </td>
                   <td className="px-4 py-3">{category.is_published ? "published" : "draft"}</td>
+                  <td className="px-4 py-3">{adminCountMap.get(category.id) ?? 0}</td>
+                  <td className="px-4 py-3">{participantCountMap.get(category.id) ?? 0}</td>
                   <td className="px-4 py-3">
-                    <Link
-                      href={`/admin/events/schedule?manage_event_id=${eventRow.id}#category-${category.id}`}
-                      className="rounded-lg border border-[#d1d5db] px-3 py-1 font-semibold text-[#111827]"
-                    >
-                      Edit Pertandingan
-                    </Link>
+                    <div className="flex flex-wrap gap-2">
+                      <Link
+                        href={`/admin/events/schedule?manage_event_id=${eventRow.id}#category-${category.id}`}
+                        className="rounded-lg border border-[#d1d5db] px-3 py-1 font-semibold text-[#111827]"
+                      >
+                        Edit Pertandingan
+                      </Link>
+                      <Link
+                        href={`/admin/admins?event_id=${eventRow.id}&category_id=${category.id}`}
+                        className="rounded-lg border border-[#d1d5db] px-3 py-1 font-semibold text-[#111827]"
+                      >
+                        Kelola Admin
+                      </Link>
+                      <Link
+                        href={`/admin/registrations?event_id=${eventRow.id}&category_id=${category.id}`}
+                        className="rounded-lg border border-[#d1d5db] px-3 py-1 font-semibold text-[#111827]"
+                      >
+                        Lihat Peserta
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}
               {categoryRows.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-4 text-[#6b7280]">
+                  <td colSpan={7} className="px-4 py-4 text-[#6b7280]">
                     Belum ada pertandingan untuk event ini.
                   </td>
                 </tr>
@@ -168,4 +218,3 @@ export default async function AdminEventDetailPage({ params }: AdminEventDetailP
     </div>
   );
 }
-

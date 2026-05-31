@@ -456,6 +456,9 @@ export async function updateEventScheduleAction(formData: FormData) {
     .eq("id", eventId);
 
   if (error) {
+    if (error.message.toLowerCase().includes("at least one pertandingan")) {
+      redirect("/admin/events/schedule?error=event_requires_match");
+    }
     if (error.message.toLowerCase().includes("duplicate key")) {
       redirect("/admin/events/schedule?error=duplicate_slug");
     }
