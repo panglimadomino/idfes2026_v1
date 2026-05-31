@@ -20,7 +20,6 @@ const adminMenu: AdminSidebarSection[] = [
     items: [
       { href: "/admin/events", label: "Buat Event" },
       { href: "/admin/events/schedule", label: "Event Schedule" },
-      { href: "/admin/events/categories", label: "Kategori Pertandingan" },
       { href: "/admin/registrations", label: "Registrasi Peserta" },
       { href: "/admin/admins", label: "Manajemen Admin" },
     ],

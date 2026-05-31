@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { updateEventScheduleAction } from "@/app/admin/actions";
+import { deleteEventCategoryAction, updateEventScheduleAction, upsertEventCategoryAction } from "@/app/admin/actions";
+import { EventCategoryForm } from "@/app/admin/events/categories/_components/event-category-form";
 import { requireAdminAccess } from "@/lib/auth/server";
 import { toDateInputValueId } from "@/lib/date-id";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -16,9 +17,56 @@ type EventRow = {
   is_featured: boolean;
 };
 
-type AdminEventSchedulePageProps = {
-  searchParams: Promise<{ updated?: string; error?: string }>;
+type EventCategoryRow = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  age_group: string | null;
+  gender_category: string | null;
+  registration_open_at: string | null;
+  registration_close_at: string | null;
+  competition_start_at: string | null;
+  competition_end_at: string | null;
+  participant_count: number | null;
+  participant_unit: string | null;
+  registration_fee: number | null;
+  registration_bank_name_1: string | null;
+  registration_bank_account_number_1: string | null;
+  registration_bank_account_holder_1: string | null;
+  registration_bank_name_2: string | null;
+  registration_bank_account_number_2: string | null;
+  registration_bank_account_holder_2: string | null;
+  pairing_zone_count: number | null;
+  pairing_cluster_count: number | null;
+  pairing_group_count: number | null;
+  pairing_table_count: number | null;
+  prize_breakdown: unknown;
+  is_published: boolean;
+  sort_order: number;
 };
+
+type AdminEventSchedulePageProps = {
+  searchParams: Promise<{
+    updated?: string;
+    error?: string;
+    manage_event_id?: string;
+    saved?: string;
+    deleted?: string;
+  }>;
+};
+
+function parseCategoryIdentity(name: string, ageGroup: string | null, genderCategory: string | null) {
+  const parts = name
+    .split(" - ")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return {
+    noPertandingan: parts[0] || name,
+    ageGroup: ageGroup ?? parts[1] ?? "Bebas",
+    genderCategory: genderCategory ?? parts[2] ?? "Putra",
+  };
+}
 
 function getErrorMessage(errorCode?: string) {
   if (!errorCode) return null;
@@ -28,7 +76,18 @@ function getErrorMessage(errorCode?: string) {
   if (errorCode === "invalid_slug") return "Slug event tidak valid.";
   if (errorCode === "duplicate_slug") return "Slug sudah dipakai event lain.";
   if (errorCode === "update_failed") return "Gagal update event. Coba lagi.";
-  return "Terjadi kesalahan saat update event.";
+  if (errorCode === "invalid_sort_order") return "Sort order harus berupa angka.";
+  if (errorCode === "invalid_identity_config") return "Konfigurasi No Pertandingan, Batas Usia, atau Jenis Kelamin tidak valid.";
+  if (errorCode === "invalid_participant_count") return "Jumlah peserta harus lebih dari 0.";
+  if (errorCode === "invalid_registration_fee") return "Biaya pendaftaran tidak valid.";
+  if (errorCode === "invalid_pairing_config") return "Nilai pairing tidak valid. Gunakan angka 0 atau lebih.";
+  if (errorCode === "invalid_prize_config") return "Konfigurasi hadiah tidak valid.";
+  if (errorCode === "invalid_registration_window") return "Tanggal selesai pendaftaran tidak boleh lebih awal dari tanggal mulai pendaftaran.";
+  if (errorCode === "invalid_competition_window") return "Tanggal selesai pertandingan tidak boleh lebih awal dari tanggal mulai.";
+  if (errorCode === "schema_not_ready") return "Schema database belum siap. Jalankan SQL migration terbaru di Supabase.";
+  if (errorCode === "save_failed") return "Gagal menyimpan kategori pertandingan.";
+  if (errorCode === "delete_failed") return "Gagal menghapus kategori pertandingan.";
+  return "Terjadi kesalahan saat memproses data.";
 }
 
 export default async function AdminEventSchedulePage({ searchParams }: AdminEventSchedulePageProps) {
@@ -37,6 +96,9 @@ export default async function AdminEventSchedulePage({ searchParams }: AdminEven
   const supabase = await createSupabaseServerClient();
   const errorMessage = getErrorMessage(params.error);
   const showSuccess = params.updated === "1";
+  const showCategorySaved = params.saved === "1";
+  const showCategoryDeleted = params.deleted === "1";
+  const manageEventId = String(params.manage_event_id ?? "").trim();
 
   const { data: events, error } = await supabase
     .from("events")
@@ -45,6 +107,23 @@ export default async function AdminEventSchedulePage({ searchParams }: AdminEven
     .limit(100);
 
   const rows = (events ?? []) as EventRow[];
+  const managingEvent = rows.find((row) => row.id === manageEventId);
+
+  let managedCategories: EventCategoryRow[] = [];
+  let managedCategoriesError: string | null = null;
+  if (managingEvent) {
+    const { data, error: categoryError } = await supabase
+      .from("event_categories")
+      .select(
+        "id, name, slug, description, age_group, gender_category, registration_open_at, registration_close_at, competition_start_at, competition_end_at, participant_count, participant_unit, registration_fee, registration_bank_name_1, registration_bank_account_number_1, registration_bank_account_holder_1, registration_bank_name_2, registration_bank_account_number_2, registration_bank_account_holder_2, pairing_zone_count, pairing_cluster_count, pairing_group_count, pairing_table_count, prize_breakdown, is_published, sort_order",
+      )
+      .eq("event_id", managingEvent.id)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+
+    managedCategories = (data ?? []) as EventCategoryRow[];
+    managedCategoriesError = categoryError?.message ?? null;
+  }
 
   return (
     <div className="space-y-6">
@@ -55,6 +134,18 @@ export default async function AdminEventSchedulePage({ searchParams }: AdminEven
 
       {showSuccess ? (
         <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">Event berhasil diupdate.</section>
+      ) : null}
+
+      {showCategorySaved ? (
+        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
+          Kategori pertandingan berhasil disimpan.
+        </section>
+      ) : null}
+
+      {showCategoryDeleted ? (
+        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
+          Kategori pertandingan berhasil dihapus.
+        </section>
       ) : null}
 
       {errorMessage ? (
@@ -75,7 +166,7 @@ export default async function AdminEventSchedulePage({ searchParams }: AdminEven
 
       {access.isSuperAdmin
         ? rows.map((event) => (
-            <section key={event.id} className="rounded-2xl border border-[#e5e7eb] bg-white p-6">
+            <section key={event.id} id={`event-${event.id}`} className="rounded-2xl border border-[#e5e7eb] bg-white p-6">
               <form action={updateEventScheduleAction} className="grid gap-3 md:grid-cols-2">
                 <input type="hidden" name="event_id" value={event.id} />
 
@@ -160,7 +251,7 @@ export default async function AdminEventSchedulePage({ searchParams }: AdminEven
                       Simpan Perubahan
                     </button>
                     <Link
-                      href={`/admin/events/categories?event_id=${event.id}`}
+                      href={`/admin/events/schedule?manage_event_id=${event.id}#event-${event.id}`}
                       className="rounded-lg border border-[#d1d5db] px-4 py-2 text-sm font-semibold text-[#111827] hover:bg-[#f9fafb]"
                     >
                       Kelola Kategori Pertandingan
@@ -168,6 +259,133 @@ export default async function AdminEventSchedulePage({ searchParams }: AdminEven
                   </div>
                 </div>
               </form>
+
+              {manageEventId === event.id ? (
+                <div className="mt-6 space-y-4 border-t border-[#e5e7eb] pt-6">
+                  <div className="flex items-center justify-between gap-3">
+                    <h2 className="text-lg font-bold text-[#111827]">Kelola Kategori: {event.name}</h2>
+                    <Link
+                      href="/admin/events/schedule"
+                      className="rounded-lg border border-[#d1d5db] px-3 py-2 text-sm font-semibold text-[#111827] hover:bg-[#f9fafb]"
+                    >
+                      Tutup
+                    </Link>
+                  </div>
+
+                  <section className="rounded-2xl border border-[#e5e7eb] bg-white p-5">
+                    <h3 className="text-lg font-bold">Tambah Kategori Baru</h3>
+                    <div className="mt-4">
+                      <EventCategoryForm
+                        action={upsertEventCategoryAction}
+                        eventId={event.id}
+                        submitLabel="Simpan Kategori"
+                        defaults={{
+                          noPertandingan: "Open Tournament",
+                          ageGroup: "Bebas",
+                          genderCategory: "Putra",
+                          slug: "open-tournament",
+                          description: "",
+                          participantCount: null,
+                          participantUnit: "peserta",
+                          registrationFee: null,
+                          registrationBankName1: "",
+                          registrationBankAccountNumber1: "",
+                          registrationBankAccountHolder1: "",
+                          registrationBankName2: "",
+                          registrationBankAccountNumber2: "",
+                          registrationBankAccountHolder2: "",
+                          competitionStartDate: "",
+                          competitionEndDate: "",
+                          registrationOpenDate: "",
+                          registrationCloseDate: "",
+                          pairingZoneCount: 0,
+                          pairingClusterCount: 0,
+                          pairingGroupCount: 0,
+                          pairingTableCount: 0,
+                          sortOrder:
+                            managedCategories.length > 0
+                              ? Math.max(...managedCategories.map((item) => item.sort_order)) + 10
+                              : 10,
+                          isPublished: true,
+                          prizes: [],
+                        }}
+                      />
+                    </div>
+                  </section>
+
+                  {managedCategoriesError ? (
+                    <section className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                      Gagal memuat kategori pertandingan: {managedCategoriesError}
+                    </section>
+                  ) : null}
+
+                  {managedCategories.length > 0 ? (
+                    <section className="space-y-4">
+                      {managedCategories.map((category) => {
+                        const identity = parseCategoryIdentity(category.name, category.age_group, category.gender_category);
+                        return (
+                          <article key={category.id} className="rounded-2xl border border-[#e5e7eb] bg-white p-6">
+                            <EventCategoryForm
+                              action={upsertEventCategoryAction}
+                              eventId={event.id}
+                              submitLabel="Simpan Perubahan"
+                              isEdit
+                              defaults={{
+                                categoryId: category.id,
+                                noPertandingan: identity.noPertandingan,
+                                ageGroup: identity.ageGroup,
+                                genderCategory: identity.genderCategory,
+                                slug: category.slug,
+                                description: category.description ?? "",
+                                participantCount: category.participant_count,
+                                participantUnit: category.participant_unit ?? "",
+                                registrationFee: category.registration_fee,
+                                registrationBankName1: category.registration_bank_name_1 ?? "",
+                                registrationBankAccountNumber1: category.registration_bank_account_number_1 ?? "",
+                                registrationBankAccountHolder1: category.registration_bank_account_holder_1 ?? "",
+                                registrationBankName2: category.registration_bank_name_2 ?? "",
+                                registrationBankAccountNumber2: category.registration_bank_account_number_2 ?? "",
+                                registrationBankAccountHolder2: category.registration_bank_account_holder_2 ?? "",
+                                competitionStartDate: category.competition_start_at ? toDateInputValueId(category.competition_start_at) : "",
+                                competitionEndDate: category.competition_end_at ? toDateInputValueId(category.competition_end_at) : "",
+                                registrationOpenDate: category.registration_open_at ? toDateInputValueId(category.registration_open_at) : "",
+                                registrationCloseDate: category.registration_close_at ? toDateInputValueId(category.registration_close_at) : "",
+                                pairingZoneCount: category.pairing_zone_count ?? 0,
+                                pairingClusterCount: category.pairing_cluster_count ?? 0,
+                                pairingGroupCount: category.pairing_group_count ?? 0,
+                                pairingTableCount: category.pairing_table_count ?? 0,
+                                sortOrder: category.sort_order,
+                                isPublished: category.is_published,
+                                prizes: Array.isArray(category.prize_breakdown)
+                                  ? (category.prize_breakdown as Array<{ label?: unknown; amount?: unknown }>)
+                                      .map((item) => {
+                                        const label = typeof item.label === "string" ? item.label : "";
+                                        const amount = Number(item.amount);
+                                        if (!label || !Number.isFinite(amount)) return null;
+                                        return { label, amount };
+                                      })
+                                      .filter((item): item is { label: string; amount: number } => item !== null)
+                                  : [],
+                              }}
+                            />
+                            <form action={deleteEventCategoryAction} className="mt-3">
+                              <input type="hidden" name="event_id" value={event.id} />
+                              <input type="hidden" name="category_id" value={category.id} />
+                              <button type="submit" className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white">
+                                Hapus Kategori
+                              </button>
+                            </form>
+                          </article>
+                        );
+                      })}
+                    </section>
+                  ) : (
+                    <section className="rounded-2xl border border-[#e5e7eb] bg-white p-5 text-sm text-[#6b7280]">
+                      Belum ada kategori pertandingan untuk event ini.
+                    </section>
+                  )}
+                </div>
+              ) : null}
             </section>
           ))
         : null}
@@ -178,3 +396,4 @@ export default async function AdminEventSchedulePage({ searchParams }: AdminEven
     </div>
   );
 }
+

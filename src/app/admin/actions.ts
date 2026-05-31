@@ -474,7 +474,7 @@ export async function upsertEventCategoryAction(formData: FormData) {
   const access = await requireAdminAccess();
   const eventId = String(formData.get("event_id") ?? "").trim();
   if (!access.isSuperAdmin) {
-    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=unauthorized`);
+    redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=unauthorized`);
   }
 
   const categoryId = String(formData.get("category_id") ?? "").trim();
@@ -505,7 +505,7 @@ export async function upsertEventCategoryAction(formData: FormData) {
   const isPublished = formData.get("is_published") === "on";
 
   if (!eventId || !name || !ageGroupRaw || !genderCategoryRaw || !competitionStartDate || !competitionEndDate || !participantCountRaw) {
-    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=required_fields`);
+    redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=required_fields`);
   }
 
   const allowedAgeGroups = new Set(["Bebas", "U-25", "O+25"]);
@@ -513,16 +513,16 @@ export async function upsertEventCategoryAction(formData: FormData) {
   const ageGroup = allowedAgeGroups.has(ageGroupRaw) ? ageGroupRaw : null;
   const genderCategory = allowedGenderCategories.has(genderCategoryRaw) ? genderCategoryRaw : null;
   if (!ageGroup || !genderCategory) {
-    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=invalid_identity_config`);
+    redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=invalid_identity_config`);
   }
 
   const sortOrder = Number.parseInt(sortOrderRaw || "0", 10);
   if (Number.isNaN(sortOrder)) {
-    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=invalid_sort_order`);
+    redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=invalid_sort_order`);
   }
   const participantCount = Number.parseInt(participantCountRaw || "0", 10);
   if (Number.isNaN(participantCount) || participantCount <= 0) {
-    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=invalid_participant_count`);
+    redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=invalid_participant_count`);
   }
 
   const allowedParticipantUnits = new Set(["pasang", "athlet", "peserta"]);
@@ -530,7 +530,7 @@ export async function upsertEventCategoryAction(formData: FormData) {
   const registrationFeeDigits = registrationFeeRaw.replace(/\D/g, "");
   const registrationFee = registrationFeeDigits ? Number.parseInt(registrationFeeDigits, 10) : null;
   if (registrationFee !== null && (Number.isNaN(registrationFee) || registrationFee < 0)) {
-    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=invalid_registration_fee`);
+    redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=invalid_registration_fee`);
   }
 
   const pairingZoneCount = Number.parseInt(pairingZoneCountRaw || "0", 10);
@@ -542,20 +542,20 @@ export async function upsertEventCategoryAction(formData: FormData) {
       (value) => Number.isNaN(value) || value < 0,
     )
   ) {
-    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=invalid_pairing_config`);
+    redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=invalid_pairing_config`);
   }
 
   const slug = normalizeSlug(slugInput || name);
   if (!slug) {
-    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=invalid_slug`);
+    redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=invalid_slug`);
   }
 
   if (registrationOpenDate && registrationCloseDate && registrationCloseDate < registrationOpenDate) {
-    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=invalid_registration_window`);
+    redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=invalid_registration_window`);
   }
 
   if (competitionStartDate && competitionEndDate && competitionEndDate < competitionStartDate) {
-    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=invalid_competition_window`);
+    redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=invalid_competition_window`);
   }
 
   let prizeBreakdown: Array<{ label: string; amount: number }> = [];
@@ -572,7 +572,7 @@ export async function upsertEventCategoryAction(formData: FormData) {
         .filter((item): item is { label: string; amount: number } => item !== null);
     }
   } catch {
-    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=invalid_prize_config`);
+    redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=invalid_prize_config`);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -616,42 +616,44 @@ export async function upsertEventCategoryAction(formData: FormData) {
 
   if (error) {
     if (error.message.toLowerCase().includes("column") && error.message.toLowerCase().includes("event_categories")) {
-      redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=schema_not_ready`);
+      redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=schema_not_ready`);
     }
     if (error.message.toLowerCase().includes("duplicate key")) {
-      redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=duplicate_slug`);
+      redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=duplicate_slug`);
     }
-    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=save_failed`);
+    redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=save_failed`);
   }
 
   revalidatePath("/admin");
+  revalidatePath("/admin/events/schedule");
   revalidatePath("/admin/events/categories");
   revalidatePath("/event");
   revalidatePath("/events");
-  redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&saved=1`);
+  redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&saved=1`);
 }
 
 export async function deleteEventCategoryAction(formData: FormData) {
   const access = await requireAdminAccess();
   const eventId = String(formData.get("event_id") ?? "").trim();
   if (!access.isSuperAdmin) {
-    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=unauthorized`);
+    redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=unauthorized`);
   }
 
   const categoryId = String(formData.get("category_id") ?? "").trim();
   if (!eventId || !categoryId) {
-    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=required_fields`);
+    redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=required_fields`);
   }
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("event_categories").delete().eq("id", categoryId).eq("event_id", eventId);
   if (error) {
-    redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&error=delete_failed`);
+    redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=delete_failed`);
   }
 
   revalidatePath("/admin");
+  revalidatePath("/admin/events/schedule");
   revalidatePath("/admin/events/categories");
   revalidatePath("/event");
   revalidatePath("/events");
-  redirect(`/admin/events/categories?event_id=${encodeURIComponent(eventId)}&deleted=1`);
+  redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&deleted=1`);
 }
