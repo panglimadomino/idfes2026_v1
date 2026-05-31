@@ -35,15 +35,50 @@ export default async function AdminEventDetailPage({ params }: AdminEventDetailP
   const { eventId } = await params;
   const supabase = await createSupabaseServerClient();
 
-  const { data: event } = await supabase
+  let {
+    data: event,
+    error: eventError,
+  } = await supabase
     .from("events")
     .select("id, name, slug, city, venue, venue_map_url, start_at, end_at, status, is_featured")
     .eq("id", eventId)
     .maybeSingle();
 
+  // Backward-compatible fallback if DB does not have venue_map_url column yet.
+  if (eventError && eventError.message.toLowerCase().includes("venue_map_url")) {
+    const fallback = await supabase
+      .from("events")
+      .select("id, name, slug, city, venue, start_at, end_at, status, is_featured")
+      .eq("id", eventId)
+      .maybeSingle();
+    event = fallback.data ? { ...fallback.data, venue_map_url: null } : null;
+    eventError = fallback.error;
+  }
+
+  if (eventError) {
+    return (
+      <div className="space-y-6">
+        <section className="rounded-2xl border border-[#e5e7eb] bg-white p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h1 className="font-title text-5xl uppercase leading-none">Detail Event</h1>
+              <p className="mt-2 text-sm text-[#6b7280]">Gagal memuat detail event.</p>
+            </div>
+            <Link href="/admin/events" className="rounded-lg border border-[#d1d5db] px-4 py-2 text-sm font-semibold text-[#111827]">
+              Kembali ke List Event
+            </Link>
+          </div>
+        </section>
+        <section className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          Error query event: {eventError.message}
+        </section>
+      </div>
+    );
+  }
+
   if (!event) notFound();
 
-  const { data: categories } = await supabase
+  const { data: categories, error: categoriesError } = await supabase
     .from("event_categories")
     .select("id, name, slug, competition_start_at, competition_end_at, is_published")
     .eq("event_id", event.id)
@@ -102,6 +137,11 @@ export default async function AdminEventDetailPage({ params }: AdminEventDetailP
         <div className="border-b border-[#e5e7eb] px-6 py-4">
           <h2 className="text-lg font-bold">List Pertandingan (Kategori)</h2>
         </div>
+        {categoriesError ? (
+          <div className="border-b border-red-200 bg-red-50 px-6 py-3 text-sm text-red-700">
+            Gagal memuat list pertandingan: {categoriesError.message}
+          </div>
+        ) : null}
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead className="bg-[#f9fafb] text-xs uppercase tracking-wide text-[#6b7280]">
