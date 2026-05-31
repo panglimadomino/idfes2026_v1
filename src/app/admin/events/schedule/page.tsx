@@ -324,7 +324,7 @@ export default async function AdminEventSchedulePage({ searchParams }: AdminEven
                       {managedCategories.map((category) => {
                         const identity = parseCategoryIdentity(category.name, category.age_group, category.gender_category);
                         return (
-                          <article key={category.id} className="rounded-2xl border border-[#e5e7eb] bg-white p-6">
+                          <article id={`category-${category.id}`} key={category.id} className="rounded-2xl border border-[#e5e7eb] bg-white p-6">
                             <EventCategoryForm
                               action={upsertEventCategoryAction}
                               eventId={event.id}
@@ -396,4 +396,3 @@ export default async function AdminEventSchedulePage({ searchParams }: AdminEven
     </div>
   );
 }
-

@@ -283,7 +283,7 @@ export async function deleteCmsMediaAction(formData: FormData) {
 export async function createEventAction(formData: FormData) {
   const access = await requireAdminAccess();
   if (!access.isSuperAdmin) {
-    redirect("/admin/events?error=unauthorized");
+    redirect("/admin/events/new?error=unauthorized");
   }
 
   const name = String(formData.get("name") ?? "").trim();
@@ -301,15 +301,15 @@ export async function createEventAction(formData: FormData) {
     .filter((entry): entry is File => entry instanceof File && entry.size > 0);
 
   if (!name || !province || !city || !startDate || !endDate) {
-    redirect("/admin/events?error=required_fields");
+    redirect("/admin/events/new?error=required_fields");
   }
 
   if (!["draft", "published", "archived"].includes(status)) {
-    redirect("/admin/events?error=invalid_status");
+    redirect("/admin/events/new?error=invalid_status");
   }
 
   if (bannerFiles.length > 5) {
-    redirect("/admin/events?error=max_banners");
+    redirect("/admin/events/new?error=max_banners");
   }
 
   if (!slug) {
@@ -317,7 +317,7 @@ export async function createEventAction(formData: FormData) {
   }
   slug = normalizeSlug(slug);
   if (!slug) {
-    redirect("/admin/events?error=invalid_slug");
+    redirect("/admin/events/new?error=invalid_slug");
   }
 
   const startAt = normalizeDateInputForStorage(startDate);
@@ -359,9 +359,9 @@ export async function createEventAction(formData: FormData) {
 
   if (error) {
     if (error.message.toLowerCase().includes("duplicate key")) {
-      redirect("/admin/events?error=duplicate_slug");
+      redirect("/admin/events/new?error=duplicate_slug");
     }
-    redirect("/admin/events?error=create_failed");
+    redirect("/admin/events/new?error=create_failed");
   }
 
   if (insertedEvent && bannerFiles.length > 0) {
@@ -378,7 +378,7 @@ export async function createEventAction(formData: FormData) {
 
       if (uploadError) {
         console.error("Gagal upload banner:", uploadError.message);
-        redirect("/admin/events?error=banner_upload_failed");
+        redirect("/admin/events/new?error=banner_upload_failed");
       }
 
       const { data: publicUrlData } = supabase.storage.from("event-banners").getPublicUrl(objectPath);
@@ -397,7 +397,7 @@ export async function createEventAction(formData: FormData) {
 
       if (insertBannerError) {
         console.error("Gagal simpan metadata banner:", insertBannerError.message);
-        redirect("/admin/events?error=banner_metadata_failed");
+        redirect("/admin/events/new?error=banner_metadata_failed");
       }
     }
   }
