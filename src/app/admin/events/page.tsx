@@ -122,20 +122,9 @@ export default async function AdminEventsPage({ searchParams }: AdminEventsPageP
                   <td className="px-4 py-3">{event.status}</td>
                   <td className="px-4 py-3">{categoryCountMap.get(event.id) ?? 0}</td>
                   <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-2">
-                      <Link href={`/admin/events/${event.id}`} className="rounded-lg border border-[#d1d5db] px-3 py-1 font-semibold text-[#111827]">
-                        Detail
-                      </Link>
-                      <Link href={`/admin/events/schedule#event-${event.id}`} className="rounded-lg border border-[#d1d5db] px-3 py-1 font-semibold text-[#111827]">
-                        Edit Event
-                      </Link>
-                      <Link
-                        href={`/admin/events/schedule?manage_event_id=${event.id}#event-${event.id}`}
-                        className="rounded-lg border border-[#111827] px-3 py-1 font-semibold text-[#111827]"
-                      >
-                        Buat Pertandingan
-                      </Link>
-                    </div>
+                    <Link href={`/admin/events/${event.id}`} className="rounded-lg border border-[#d1d5db] px-3 py-1 font-semibold text-[#111827]">
+                      Detail
+                    </Link>
                   </td>
                 </tr>
               ))}
