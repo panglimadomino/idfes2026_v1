@@ -17,27 +17,69 @@ type CategorySidebarRow = {
   sort_order: number | null;
 };
 
-const baseAdminMenu: AdminSidebarSection[] = [
-  {
-    title: "Utama",
-    items: [{ href: "/admin", label: "Dashboard" }],
-  },
-  {
-    title: "Kelola Halaman Public",
-    items: [
-      { href: "/admin/cms/pages", label: "CMS Halaman" },
-      { href: "/admin/cms/media", label: "CMS Media" },
-    ],
-  },
-  {
-    title: "Event & Operasional",
-    items: [
-      { href: "/admin/events", label: "Event" },
-      { href: "/admin/registrations", label: "Registrasi Peserta" },
-      { href: "/admin/admins", label: "Manajemen Admin" },
-    ],
-  },
-];
+type CmsPageSidebarRow = {
+  id: string;
+  page_key: string;
+  title: string;
+};
+
+type CmsSectionSidebarRow = {
+  id: string;
+  page_id: string;
+  section_key: string;
+  title: string | null;
+  sort_order: number | null;
+};
+
+function toTitleCaseLabel(value: string) {
+  return value
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function buildHomeTreeItems(cmsPages: CmsPageSidebarRow[], cmsSections: CmsSectionSidebarRow[]): AdminSidebarItem[] {
+  const homePage = cmsPages.find((page) => page.page_key === "home") ?? null;
+  const homeSections = homePage
+    ? cmsSections
+        .filter((section) => section.page_id === homePage.id)
+        .sort((a, b) => {
+          const left = a.sort_order ?? 0;
+          const right = b.sort_order ?? 0;
+          if (left !== right) return left - right;
+          return a.section_key.localeCompare(b.section_key, "id");
+        })
+    : [];
+
+  const sectionItems: AdminSidebarItem[] = homeSections.map((section) => ({
+    href: `/admin/cms/pages?page_key=home&section_key=${section.section_key}`,
+    label: section.title?.trim() || toTitleCaseLabel(section.section_key),
+    exact: true,
+  }));
+
+  if (!sectionItems.some((item) => item.href.includes("section_key=hero"))) {
+    sectionItems.unshift({
+      href: "/admin/cms/pages?page_key=home&section_key=hero",
+      label: "Hero Section",
+      exact: true,
+    });
+  }
+
+  return [
+    {
+      href: "/admin/cms/pages?page_key=home",
+      label: "HOME",
+      exact: true,
+      children: sectionItems,
+    },
+    {
+      href: "/admin/cms/media",
+      label: "Media Public",
+      exact: true,
+    },
+  ];
+}
 
 function buildEventTreeItems(events: EventSidebarRow[], categories: CategorySidebarRow[], isSuperAdmin: boolean): AdminSidebarItem[] {
   const categoriesByEvent = new Map<string, CategorySidebarRow[]>();
@@ -66,13 +108,38 @@ function buildEventTreeItems(events: EventSidebarRow[], categories: CategorySide
       label: categoryRow.name,
       children: [
         {
+          href: `/admin/events/${eventRow.id}/categories/${categoryRow.id}`,
+          label: "Data Pertandingan",
+          exact: true,
+        },
+        {
           href: `/admin/admins?event_id=${eventRow.id}&category_id=${categoryRow.id}`,
           label: "Admin Pertandingan",
           exact: true,
         },
         {
           href: `/admin/registrations?event_id=${eventRow.id}&category_id=${categoryRow.id}`,
-          label: "Peserta",
+          label: "Pendaftaran & Verifikasi Peserta",
+          exact: true,
+        },
+        {
+          href: `/admin/events/${eventRow.id}/categories/${categoryRow.id}/pairing/rr`,
+          label: "RR Pairing",
+          exact: true,
+        },
+        {
+          href: `/admin/events/${eventRow.id}/categories/${categoryRow.id}/pairing/rr?view=bracket`,
+          label: "Bagan RR",
+          exact: true,
+        },
+        {
+          href: `/admin/events/${eventRow.id}/categories/${categoryRow.id}/pairing/se`,
+          label: "SE Pairing",
+          exact: true,
+        },
+        {
+          href: `/admin/events/${eventRow.id}/categories/${categoryRow.id}/pairing/se?view=bracket`,
+          label: "Bagan SE",
           exact: true,
         },
       ],
@@ -98,7 +165,7 @@ function buildEventTreeItems(events: EventSidebarRow[], categories: CategorySide
   return [
     {
       href: "/admin/events",
-      label: "Event",
+      label: "ID FES 2026",
       children: eventChildren,
     },
   ];
@@ -107,27 +174,30 @@ function buildEventTreeItems(events: EventSidebarRow[], categories: CategorySide
 async function buildAdminMenu(isSuperAdmin: boolean): Promise<AdminSidebarSection[]> {
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: events }, { data: categories }] = await Promise.all([
+  const [{ data: events }, { data: categories }, { data: cmsPages }, { data: cmsSections }] = await Promise.all([
     supabase.from("events").select("id, name, start_at").order("start_at", { ascending: false }).limit(200),
     supabase.from("event_categories").select("id, event_id, name, sort_order").limit(1000),
+    supabase.from("cms_pages").select("id, page_key, title"),
+    supabase.from("cms_sections").select("id, page_id, section_key, title, sort_order").eq("is_visible", true),
   ]);
 
   const eventRows = ((events ?? []) as EventSidebarRow[]).filter((row) => !!row.id && !!row.name);
   const categoryRows = ((categories ?? []) as CategorySidebarRow[]).filter((row) => !!row.id && !!row.event_id && !!row.name);
+  const cmsPageRows = ((cmsPages ?? []) as CmsPageSidebarRow[]).filter((row) => !!row.id && !!row.page_key);
+  const cmsSectionRows = ((cmsSections ?? []) as CmsSectionSidebarRow[]).filter(
+    (row) => !!row.id && !!row.page_id && !!row.section_key,
+  );
 
-  return baseAdminMenu.map((section) => {
-    if (section.title !== "Event & Operasional") return section;
-
-    const eventItems = buildEventTreeItems(eventRows, categoryRows, isSuperAdmin);
-    return {
-      ...section,
-      items: [
-        ...eventItems,
-        { href: "/admin/registrations", label: "Registrasi Peserta" },
-        { href: "/admin/admins", label: "Manajemen Admin" },
-      ],
-    };
-  });
+  return [
+    {
+      title: "Halaman",
+      items: [{ href: "/admin", label: "Dashboard", exact: true }, ...buildHomeTreeItems(cmsPageRows, cmsSectionRows)],
+    },
+    {
+      title: "ID FES 2026",
+      items: buildEventTreeItems(eventRows, categoryRows, isSuperAdmin),
+    },
+  ];
 }
 
 export default async function AdminLayout({
