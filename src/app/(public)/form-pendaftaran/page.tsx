@@ -26,6 +26,8 @@ function formatRupiah(value: number) {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(value);
 }
 
+const GENDER_OPTIONS = ["Putra", "Putri", "Campuran"] as const;
+
 export default async function RegistrationFormPage({ searchParams }: RegistrationFormPageProps) {
   const params = await searchParams;
 
@@ -124,6 +126,33 @@ export default async function RegistrationFormPage({ searchParams }: Registratio
         </label>
 
         <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)]">
+          Nama Tim / Pasangan
+          <input
+            name="team_name"
+            placeholder={isPairCategory ? "Contoh: Tim Jatim A" : "Contoh: Nama peserta"}
+            className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]"
+          />
+        </label>
+
+        <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)]">
+          Kabupaten/Kota
+          <input
+            name="kabupaten_kota"
+            placeholder="Contoh: Kota Surabaya"
+            className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]"
+          />
+        </label>
+
+        <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)] md:col-span-2">
+          Social Media (opsional)
+          <input
+            name="social_media"
+            placeholder="Contoh: @username_ig / tiktok / youtube"
+            className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]"
+          />
+        </label>
+
+        <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)]">
           {isPairCategory ? "Nama Atlet 1" : "Nama Peserta"}
           <input
             name="athlete_1_name"
@@ -136,6 +165,35 @@ export default async function RegistrationFormPage({ searchParams }: Registratio
           {isPairCategory ? "Nomor WhatsApp Atlet 1" : "Nomor WhatsApp Peserta"}
           <input
             name="athlete_1_whatsapp"
+            required
+            className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]"
+          />
+        </label>
+
+        <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)]">
+          Jenis Kelamin Atlet 1
+          <select
+            name="athlete_1_gender"
+            defaultValue=""
+            required
+            className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]"
+          >
+            <option value="" disabled>
+              Pilih jenis kelamin
+            </option>
+            {GENDER_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)]">
+          Tanggal Lahir Atlet 1
+          <input
+            name="athlete_1_date_of_birth"
+            type="date"
             required
             className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]"
           />
@@ -168,6 +226,35 @@ export default async function RegistrationFormPage({ searchParams }: Registratio
               Nomor WhatsApp Atlet 2
               <input
                 name="athlete_2_whatsapp"
+                required
+                className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]"
+              />
+            </label>
+
+            <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)]">
+              Jenis Kelamin Atlet 2
+              <select
+                name="athlete_2_gender"
+                defaultValue=""
+                required
+                className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]"
+              >
+                <option value="" disabled>
+                  Pilih jenis kelamin
+                </option>
+                {GENDER_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)]">
+              Tanggal Lahir Atlet 2
+              <input
+                name="athlete_2_date_of_birth"
+                type="date"
                 required
                 className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]"
               />

@@ -4,6 +4,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 const PHOTO_BUCKET = "registration-athlete-photos";
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const ALLOWED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const ALLOWED_GENDERS = new Set(["Putra", "Putri", "Campuran"]);
 
 type EventRow = {
   id: string;
@@ -84,6 +85,34 @@ function getText(formData: FormData, name: string) {
   return typeof raw === "string" ? raw.trim() : "";
 }
 
+function parseBirthDate(input: string) {
+  if (!input) return null;
+  const value = input.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return value;
+}
+
+function computeAgeFromDate(dateValue: string | null) {
+  if (!dateValue) return null;
+  const birth = new Date(`${dateValue}T00:00:00.000Z`);
+  if (Number.isNaN(birth.getTime())) return null;
+
+  const now = new Date();
+  let age = now.getUTCFullYear() - birth.getUTCFullYear();
+  const monthDiff = now.getUTCMonth() - birth.getUTCMonth();
+  const dayDiff = now.getUTCDate() - birth.getUTCDate();
+  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) age -= 1;
+  if (age < 0) return null;
+  return age;
+}
+
+function normalizeGender(value: string) {
+  const cleaned = value.trim();
+  return ALLOWED_GENDERS.has(cleaned) ? cleaned : null;
+}
+
 function isValidPhotoFile(file: File | null) {
   if (!file) return false;
   if (!ALLOWED_PHOTO_TYPES.has(file.type)) return false;
@@ -124,16 +153,26 @@ export async function POST(req: Request) {
     categorySlug = getText(formData, "category_slug");
 
     const email = getText(formData, "email").toLowerCase();
+    const teamNameInput = getText(formData, "team_name");
+    const kabupatenKotaInput = getText(formData, "kabupaten_kota");
+    const socialMediaInput = getText(formData, "social_media");
     const athlete1Name = getText(formData, "athlete_1_name");
     const athlete1Whatsapp = getText(formData, "athlete_1_whatsapp");
+    const athlete1Gender = normalizeGender(getText(formData, "athlete_1_gender"));
+    const athlete1DateOfBirth = parseBirthDate(getText(formData, "athlete_1_date_of_birth"));
     const athlete2Name = getText(formData, "athlete_2_name");
     const athlete2Whatsapp = getText(formData, "athlete_2_whatsapp");
+    const athlete2Gender = normalizeGender(getText(formData, "athlete_2_gender"));
+    const athlete2DateOfBirth = parseBirthDate(getText(formData, "athlete_2_date_of_birth"));
 
     const athlete1Photo = formData.get("athlete_1_photo");
     const athlete2Photo = formData.get("athlete_2_photo");
 
     if (!eventSlug || !categorySlug || !email || !athlete1Name || !athlete1Whatsapp) {
       return buildErrorRedirect(req, eventSlug, categorySlug, "Data wajib belum lengkap.");
+    }
+    if (!athlete1Gender || !athlete1DateOfBirth) {
+      return buildErrorRedirect(req, eventSlug, categorySlug, "Jenis kelamin dan tanggal lahir atlet 1 wajib diisi.");
     }
 
     const athlete1File = athlete1Photo instanceof File ? athlete1Photo : null;
@@ -180,12 +219,12 @@ export async function POST(req: Request) {
     let athlete2File: File | null = null;
     if (isPairCategory) {
       athlete2File = athlete2Photo instanceof File ? athlete2Photo : null;
-      if (!athlete2Name || !athlete2Whatsapp || !isValidPhotoFile(athlete2File)) {
+      if (!athlete2Name || !athlete2Whatsapp || !athlete2Gender || !athlete2DateOfBirth || !isValidPhotoFile(athlete2File)) {
         return buildErrorRedirect(
           req,
           eventSlug,
           categorySlug,
-          "Kategori pasang wajib isi data atlet 2 dan upload foto atlet 2 (JPG/PNG/WEBP max 5MB).",
+          "Kategori pasang wajib isi lengkap data atlet 2 dan upload foto atlet 2 (JPG/PNG/WEBP max 5MB).",
         );
       }
     }
@@ -221,7 +260,10 @@ export async function POST(req: Request) {
     }
 
     const { cityValue, provinceValue } = parseEventCity(eventRow.city);
-    const teamName = isPairCategory ? `${athlete1Name} / ${athlete2Name}` : athlete1Name;
+    const teamName = teamNameInput || (isPairCategory ? `${athlete1Name} / ${athlete2Name}` : athlete1Name);
+    const kabupatenKota = kabupatenKotaInput || cityValue;
+    const athlete1Age = computeAgeFromDate(athlete1DateOfBirth);
+    const athlete2Age = computeAgeFromDate(athlete2DateOfBirth);
 
     const insertPayload = {
       registration_code: registrationNo,
@@ -235,13 +277,20 @@ export async function POST(req: Request) {
       team_name: teamName,
       club_name: teamName,
       city: cityValue,
-      kabupaten_kota: cityValue,
+      kabupaten_kota: kabupatenKota,
       province: provinceValue,
+      social_media: socialMediaInput || null,
       athlete_1_name: athlete1Name,
       athlete_1_whatsapp: athlete1Whatsapp,
+      athlete_1_gender: athlete1Gender,
+      athlete_1_date_of_birth: athlete1DateOfBirth,
+      athlete_1_age: athlete1Age,
       athlete_1_photo_url: athlete1PhotoUrl,
       athlete_2_name: isPairCategory ? athlete2Name : null,
       athlete_2_whatsapp: isPairCategory ? athlete2Whatsapp : null,
+      athlete_2_gender: isPairCategory ? athlete2Gender : null,
+      athlete_2_date_of_birth: isPairCategory ? athlete2DateOfBirth : null,
+      athlete_2_age: isPairCategory ? athlete2Age : null,
       athlete_2_photo_url: isPairCategory ? athlete2PhotoUrl : null,
       payment_status: "pending",
       verification_status: "pending",
