@@ -30,6 +30,7 @@ type CmsSectionSidebarRow = {
   section_key: string;
   title: string | null;
   sort_order: number | null;
+  is_visible: boolean;
 };
 
 function toTitleCaseLabel(value: string) {
@@ -40,13 +41,21 @@ function toTitleCaseLabel(value: string) {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-function buildPublicPageItem(page: CmsPageSidebarRow | null, cmsSections: CmsSectionSidebarRow[], fallbackLabel: string): AdminSidebarItem {
+function toSectionLabel(section: CmsSectionSidebarRow) {
+  if (section.title?.trim()) return section.title.trim();
+  if (section.section_key === "hero") return "Hero Section";
+  return toTitleCaseLabel(section.section_key);
+}
+
+function buildPageSectionItems(page: CmsPageSidebarRow | null, cmsSections: CmsSectionSidebarRow[], fallbackPageKey: string): AdminSidebarItem[] {
   if (!page) {
-    return {
-      href: "/admin/cms/pages",
-      label: fallbackLabel,
-      exact: true,
-    };
+    return [
+      {
+        href: `/admin/cms/pages?page_key=${fallbackPageKey}&section_key=hero`,
+        label: "Hero Section",
+        exact: true,
+      },
+    ];
   }
 
   const pageSections = cmsSections
@@ -58,34 +67,40 @@ function buildPublicPageItem(page: CmsPageSidebarRow | null, cmsSections: CmsSec
       return a.section_key.localeCompare(b.section_key, "id");
     });
 
-  const sectionItems: AdminSidebarItem[] = pageSections.map((section) => ({
+  if (pageSections.length === 0) {
+    return [
+      {
+        href: `/admin/cms/pages?page_key=${page.page_key}&section_key=hero`,
+        label: "Hero Section",
+        exact: true,
+      },
+    ];
+  }
+
+  return pageSections.map((section) => ({
     href: `/admin/cms/pages?page_key=${page.page_key}&section_key=${section.section_key}`,
-    label: section.title?.trim() || toTitleCaseLabel(section.section_key),
+    label: toSectionLabel(section),
     exact: true,
   }));
-
-  return {
-    href: `/admin/cms/pages?page_key=${page.page_key}`,
-    label: fallbackLabel,
-    exact: true,
-    children: sectionItems,
-  };
 }
 
-function buildPublicContentTreeItems(cmsPages: CmsPageSidebarRow[], cmsSections: CmsSectionSidebarRow[]): AdminSidebarItem[] {
+function buildPublicContentTreeItems(cmsPages: CmsPageSidebarRow[], cmsSections: CmsSectionSidebarRow[]): AdminSidebarSection[] {
   const homePage = cmsPages.find((page) => page.page_key === "home" || page.slug === "/") ?? null;
-  const idFesPage =
-    cmsPages.find((page) => page.page_key === "event" || page.slug === "/event" || page.slug === "/events") ?? null;
-  const newsPage = cmsPages.find((page) => page.page_key === "berita" || page.page_key === "news" || page.slug === "/berita") ?? null;
 
   return [
-    buildPublicPageItem(homePage, cmsSections, "HOME"),
-    buildPublicPageItem(idFesPage, cmsSections, "ID FES 2026"),
-    buildPublicPageItem(newsPage, cmsSections, "BERITA"),
     {
-      href: "/admin/cms/media",
-      label: "Media Public",
-      exact: true,
+      title: "Kelola Halaman Publik",
+      items: [
+        {
+          href: "/admin/cms/media",
+          label: "Header",
+          exact: true,
+        },
+      ],
+    },
+    {
+      title: "Home",
+      items: buildPageSectionItems(homePage, cmsSections, "home"),
     },
   ];
 }
@@ -189,8 +204,7 @@ async function buildAdminMenu(isSuperAdmin: boolean): Promise<AdminSidebarSectio
     supabase.from("cms_pages").select("id, page_key, title, slug"),
     supabase
       .from("cms_page_sections")
-      .select("id, page_id, section_key, title, sort_order")
-      .eq("is_visible", true),
+      .select("id, page_id, section_key, title, sort_order, is_visible"),
   ]);
 
   const eventRows = ((events ?? []) as EventSidebarRow[]).filter((row) => !!row.id && !!row.name);
@@ -200,11 +214,14 @@ async function buildAdminMenu(isSuperAdmin: boolean): Promise<AdminSidebarSectio
     (row) => !!row.id && !!row.page_id && !!row.section_key,
   );
 
+  const publicSections = buildPublicContentTreeItems(cmsPageRows, cmsSectionRows);
+
   return [
     {
-      title: "Halaman",
-      items: [{ href: "/admin", label: "Dashboard", exact: true }, ...buildPublicContentTreeItems(cmsPageRows, cmsSectionRows)],
+      title: "Dashboard",
+      items: [{ href: "/admin", label: "Dashboard", exact: true }],
     },
+    ...publicSections,
     {
       title: "ID FES 2026",
       items: buildEventTreeItems(eventRows, categoryRows, isSuperAdmin),

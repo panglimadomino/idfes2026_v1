@@ -123,7 +123,7 @@ function SidebarItemRow({
             aria-label={isOpen ? `Sembunyikan submenu ${item.label}` : `Tampilkan submenu ${item.label}`}
             className="rounded px-2 py-1 text-xs font-semibold text-[#4b5563] hover:text-[#111827]"
           >
-            {isOpen ? "▾" : "▸"}
+            {isOpen ? "v" : ">"}
           </button>
         ) : null}
       </div>
@@ -210,7 +210,7 @@ export function AdminSidebarNav({ sections, onItemClick }: AdminSidebarNavProps)
               aria-label={sectionOpen ? `Sembunyikan submenu ${section.title}` : `Tampilkan submenu ${section.title}`}
             >
               <span>{section.title}</span>
-              <span className="text-sm normal-case">{sectionOpen ? "▾" : "▸"}</span>
+              <span className="text-sm normal-case">{sectionOpen ? "v" : ">"}</span>
             </button>
 
             {sectionOpen ? (
@@ -236,4 +236,5 @@ export function AdminSidebarNav({ sections, onItemClick }: AdminSidebarNavProps)
     </nav>
   );
 }
+
 

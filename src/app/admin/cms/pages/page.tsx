@@ -17,6 +17,7 @@ type CmsSectionRow = {
   section_key: string;
   section_type: string;
   title: string | null;
+  content: Record<string, unknown> | null;
   is_visible: boolean;
   sort_order: number;
   updated_at: string;
@@ -49,15 +50,27 @@ type SiteSettingRow = {
   updated_at: string;
 };
 
-export default async function AdminCmsPagesPage() {
+type AdminCmsPagesPageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
+
+function getSingleQueryParam(value: string | string[] | undefined) {
+  if (Array.isArray(value)) return value[0] ?? "";
+  return value ?? "";
+}
+
+export default async function AdminCmsPagesPage({ searchParams }: AdminCmsPagesPageProps) {
   const access = await requireAdminAccess();
   const supabase = await createSupabaseServerClient();
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const selectedPageKey = getSingleQueryParam(resolvedSearchParams.page_key).trim();
+  const selectedSectionKey = getSingleQueryParam(resolvedSearchParams.section_key).trim();
 
   const [pagesQuery, sectionsQuery, blocksQuery, navQuery, settingsQuery] = await Promise.all([
     supabase.from("cms_pages").select("id, page_key, title, slug, is_published, updated_at").order("updated_at", { ascending: false }),
     supabase
       .from("cms_page_sections")
-      .select("id, page_id, section_key, section_type, title, is_visible, sort_order, updated_at")
+      .select("id, page_id, section_key, section_type, title, content, is_visible, sort_order, updated_at")
       .order("page_id", { ascending: true })
       .order("sort_order", { ascending: true }),
     supabase
@@ -78,6 +91,15 @@ export default async function AdminCmsPagesPage() {
   const blocks = (blocksQuery.data ?? []) as CmsBlockRow[];
   const navItems = (navQuery.data ?? []) as NavItemRow[];
   const settings = (settingsQuery.data ?? []) as SiteSettingRow[];
+  const selectedPage = pages.find((page) => page.page_key === selectedPageKey) ?? null;
+  const sectionsForSelectedPage = selectedPage ? sections.filter((section) => section.page_id === selectedPage.id) : sections;
+  const selectedSection =
+    selectedPage && selectedSectionKey
+      ? sections.find((section) => section.page_id === selectedPage.id && section.section_key === selectedSectionKey) ?? null
+      : null;
+  const visibleSections = selectedPage ? sectionsForSelectedPage : sections;
+  const visibleSectionIds = new Set(visibleSections.map((section) => section.id));
+  const visibleBlocks = blocks.filter((block) => visibleSectionIds.has(block.section_id));
 
   const errors = [
     pagesQuery.error ? `CMS pages: ${pagesQuery.error.message}` : null,
@@ -95,6 +117,18 @@ export default async function AdminCmsPagesPage() {
           Kelola halaman public beserta section, block, navigation, dan site settings dari satu tempat.
         </p>
       </section>
+
+      {selectedPage ? (
+        <section className="rounded-2xl border border-[#bfdbfe] bg-[#eff6ff] p-4 text-sm text-[#1e3a8a]">
+          <p className="font-semibold">
+            Konteks Edit: {selectedPage.title} ({selectedPage.page_key})
+            {selectedSection ? ` -> ${selectedSection.title?.trim() || selectedSection.section_key}` : ""}
+          </p>
+          <p className="mt-1">
+            Sidebar sudah mengarahkan ke halaman/section terpilih. Form di bawah siap dipakai untuk update konten section ini.
+          </p>
+        </section>
+      ) : null}
 
       {errors.length > 0 ? (
         <section className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -150,7 +184,12 @@ export default async function AdminCmsPagesPage() {
           <article className="rounded-2xl border border-[#e5e7eb] bg-white p-6">
             <h2 className="text-lg font-bold">Tambah / Update Section</h2>
             <form action={upsertCmsSectionAction} className="mt-4 grid gap-3">
-              <select name="page_id" required className="rounded-lg border border-[#d1d5db] px-3 py-2">
+              <select
+                name="page_id"
+                required
+                defaultValue={selectedPage?.id || ""}
+                className="rounded-lg border border-[#d1d5db] px-3 py-2"
+              >
                 <option value="">Pilih Page</option>
                 {pages.map((page) => (
                   <option key={page.id} value={page.id}>
@@ -158,9 +197,26 @@ export default async function AdminCmsPagesPage() {
                   </option>
                 ))}
               </select>
-              <input name="section_key" required placeholder="section_key (contoh: hero)" className="rounded-lg border border-[#d1d5db] px-3 py-2" />
-              <input name="section_type" required placeholder="section_type (contoh: hero/cards/news)" className="rounded-lg border border-[#d1d5db] px-3 py-2" />
-              <input name="title" placeholder="Title section (opsional)" className="rounded-lg border border-[#d1d5db] px-3 py-2" />
+              <input
+                name="section_key"
+                required
+                defaultValue={selectedSection?.section_key || ""}
+                placeholder="section_key (contoh: hero)"
+                className="rounded-lg border border-[#d1d5db] px-3 py-2"
+              />
+              <input
+                name="section_type"
+                required
+                defaultValue={selectedSection?.section_type || ""}
+                placeholder="section_type (contoh: hero/cards/news)"
+                className="rounded-lg border border-[#d1d5db] px-3 py-2"
+              />
+              <input
+                name="title"
+                defaultValue={selectedSection?.title || ""}
+                placeholder="Title section (opsional)"
+                className="rounded-lg border border-[#d1d5db] px-3 py-2"
+              />
               <input name="subtitle" placeholder="Subtitle section (opsional)" className="rounded-lg border border-[#d1d5db] px-3 py-2" />
               <input
                 name="sort_order"
@@ -171,7 +227,7 @@ export default async function AdminCmsPagesPage() {
               />
               <textarea
                 name="content_json"
-                defaultValue='{}'
+                defaultValue={selectedSection ? JSON.stringify(selectedSection.content ?? {}, null, 2) : "{}"}
                 rows={4}
                 className="font-mono rounded-lg border border-[#d1d5db] px-3 py-2 text-xs"
               />
@@ -188,9 +244,14 @@ export default async function AdminCmsPagesPage() {
           <article className="rounded-2xl border border-[#e5e7eb] bg-white p-6">
             <h2 className="text-lg font-bold">Tambah / Update Block</h2>
             <form action={upsertCmsBlockAction} className="mt-4 grid gap-3">
-              <select name="section_id" required className="rounded-lg border border-[#d1d5db] px-3 py-2">
+              <select
+                name="section_id"
+                required
+                defaultValue={selectedSection?.id || ""}
+                className="rounded-lg border border-[#d1d5db] px-3 py-2"
+              >
                 <option value="">Pilih Section</option>
-                {sections.map((section) => (
+                {visibleSections.map((section) => (
                   <option key={section.id} value={section.id}>
                     {section.section_key} ({section.section_type})
                   </option>
@@ -271,7 +332,7 @@ export default async function AdminCmsPagesPage() {
                 </tr>
               </thead>
               <tbody>
-                {sections.map((section) => (
+                {visibleSections.map((section) => (
                   <tr key={section.id} className="border-t border-[#f1f5f9]">
                     <td className="px-4 py-3 font-semibold">{section.section_key}</td>
                     <td className="px-4 py-3">{section.section_type}</td>
@@ -279,7 +340,7 @@ export default async function AdminCmsPagesPage() {
                     <td className="px-4 py-3">{section.sort_order}</td>
                   </tr>
                 ))}
-                {sections.length === 0 ? (
+                {visibleSections.length === 0 ? (
                   <tr>
                     <td className="px-4 py-4 text-[#6b7280]" colSpan={4}>
                       Belum ada section.
@@ -304,7 +365,7 @@ export default async function AdminCmsPagesPage() {
                 </tr>
               </thead>
               <tbody>
-                {blocks.map((block) => (
+                {visibleBlocks.map((block) => (
                   <tr key={block.id} className="border-t border-[#f1f5f9]">
                     <td className="px-4 py-3 font-semibold">{block.block_key}</td>
                     <td className="px-4 py-3">{block.block_type}</td>
@@ -312,7 +373,7 @@ export default async function AdminCmsPagesPage() {
                     <td className="px-4 py-3">{block.sort_order}</td>
                   </tr>
                 ))}
-                {blocks.length === 0 ? (
+                {visibleBlocks.length === 0 ? (
                   <tr>
                     <td className="px-4 py-4 text-[#6b7280]" colSpan={4}>
                       Belum ada block.
