@@ -7,7 +7,7 @@ import {
 import { formatDateId } from "@/lib/date-id";
 
 type RegistrationFormPageProps = {
-  searchParams: Promise<{ event?: string; category?: string }>;
+  searchParams: Promise<{ event?: string; category?: string; status?: string; message?: string }>;
 };
 
 function formatWindow(start: string | null, end: string | null) {
@@ -46,6 +46,8 @@ export default async function RegistrationFormPage({ searchParams }: Registratio
     null;
 
   const isPairCategory = selectedCategory?.participant_unit === "pasang";
+  const statusMessage = params.message ? decodeURIComponent(params.message) : "";
+  const statusType = params.status === "ok" ? "ok" : params.status === "error" ? "error" : null;
 
   return (
     <div className="site-frame space-y-8 px-4 pb-16 pt-8 sm:px-6 lg:px-8">
@@ -75,7 +77,26 @@ export default async function RegistrationFormPage({ searchParams }: Registratio
         </section>
       )}
 
-      <form className="grid gap-4 rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-6 md:grid-cols-2">
+      {statusType && statusMessage ? (
+        <section
+          className={`rounded-2xl border p-4 text-sm ${
+            statusType === "ok"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border-red-200 bg-red-50 text-red-700"
+          }`}
+        >
+          {statusMessage}
+        </section>
+      ) : null}
+
+      <form
+        className="grid gap-4 rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-6 md:grid-cols-2"
+        encType="multipart/form-data"
+        method="post"
+        action="/form-pendaftaran/submit"
+      >
+        <input type="hidden" name="event_slug" value={event?.slug ?? ""} />
+
         <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)]">
           Pilih Kategori
           <select
@@ -97,18 +118,39 @@ export default async function RegistrationFormPage({ searchParams }: Registratio
             name="email"
             type="email"
             placeholder="nama@email.com"
+            required
             className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]"
           />
         </label>
 
         <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)]">
           {isPairCategory ? "Nama Atlet 1" : "Nama Peserta"}
-          <input name="athlete_1_name" className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]" />
+          <input
+            name="athlete_1_name"
+            required
+            className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]"
+          />
         </label>
 
         <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)]">
           {isPairCategory ? "Nomor WhatsApp Atlet 1" : "Nomor WhatsApp Peserta"}
-          <input name="athlete_1_whatsapp" className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]" />
+          <input
+            name="athlete_1_whatsapp"
+            required
+            className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]"
+          />
+        </label>
+
+        <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)]">
+          {isPairCategory ? "Foto Atlet 1" : "Foto Peserta"}
+          <input
+            name="athlete_1_photo"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            required
+            className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)] file:mr-3 file:rounded-md file:border-0 file:bg-[var(--ink-strong)] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-[var(--surface-card)]"
+          />
+          <p className="text-xs font-normal text-[var(--ink-soft)]">Format: JPG/PNG/WEBP.</p>
         </label>
 
         {isPairCategory ? (
@@ -117,6 +159,7 @@ export default async function RegistrationFormPage({ searchParams }: Registratio
               Nama Atlet 2
               <input
                 name="athlete_2_name"
+                required
                 className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]"
               />
             </label>
@@ -125,14 +168,27 @@ export default async function RegistrationFormPage({ searchParams }: Registratio
               Nomor WhatsApp Atlet 2
               <input
                 name="athlete_2_whatsapp"
+                required
                 className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]"
               />
+            </label>
+
+            <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)]">
+              Foto Atlet 2
+              <input
+                name="athlete_2_photo"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                required
+                className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)] file:mr-3 file:rounded-md file:border-0 file:bg-[var(--ink-strong)] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-[var(--surface-card)]"
+              />
+              <p className="text-xs font-normal text-[var(--ink-soft)]">Format: JPG/PNG/WEBP.</p>
             </label>
           </>
         ) : null}
 
         <div className="md:col-span-2">
-          <button type="button" className="rounded-full bg-[var(--ink-strong)] px-6 py-3 text-sm font-bold text-[var(--surface-card)]">
+          <button type="submit" className="rounded-full bg-[var(--ink-strong)] px-6 py-3 text-sm font-bold text-[var(--surface-card)]">
             Kirim Pendaftaran
           </button>
         </div>
@@ -185,4 +241,3 @@ export default async function RegistrationFormPage({ searchParams }: Registratio
     </div>
   );
 }
-
