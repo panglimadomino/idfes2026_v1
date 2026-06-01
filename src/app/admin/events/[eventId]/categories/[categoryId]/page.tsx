@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { upsertEventCategoryAction } from "@/app/admin/actions";
+import { EventCategoryForm } from "@/app/admin/events/categories/_components/event-category-form";
 import { requireAdminAccess } from "@/lib/auth/server";
-import { formatDateId } from "@/lib/date-id";
+import { formatDateId, toDateInputValueId } from "@/lib/date-id";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type EventRow = {
@@ -39,34 +41,57 @@ type EventCategoryRow = {
   pairing_table_count: number | null;
   prize_breakdown: unknown;
   is_published: boolean;
+  sort_order: number | null;
 };
 
 type AdminCategoryDetailPageProps = {
   params: Promise<{ eventId: string; categoryId: string }>;
+  searchParams: Promise<{ saved?: string; error?: string }>;
 };
 
-function formatRupiah(value: number | null | undefined) {
-  if (!Number.isFinite(value ?? NaN)) return "-";
-  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(value as number);
+function parseCategoryIdentity(name: string, ageGroup: string | null, genderCategory: string | null) {
+  const parts = name
+    .split(" - ")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return {
+    noPertandingan: parts[0] || name,
+    ageGroup: ageGroup ?? parts[1] ?? "Bebas",
+    genderCategory: genderCategory ?? parts[2] ?? "Putra",
+  };
 }
 
-function formatParticipantUnit(value: string | null) {
-  if (value === "pasang") return "pasang";
-  if (value === "athlet") return "athlet";
-  return "peserta";
+function getErrorMessage(errorCode?: string) {
+  if (!errorCode) return null;
+  if (errorCode === "required_fields") return "Field wajib belum lengkap.";
+  if (errorCode === "invalid_sort_order") return "Sort order harus berupa angka.";
+  if (errorCode === "invalid_identity_config") return "Konfigurasi No Pertandingan, Batas Usia, atau Jenis Kelamin tidak valid.";
+  if (errorCode === "invalid_participant_count") return "Jumlah peserta harus lebih dari 0.";
+  if (errorCode === "invalid_registration_fee") return "Biaya pendaftaran tidak valid.";
+  if (errorCode === "invalid_pairing_config") return "Nilai pairing tidak valid. Gunakan angka 0 atau lebih.";
+  if (errorCode === "invalid_prize_config") return "Konfigurasi hadiah tidak valid.";
+  if (errorCode === "invalid_registration_window") return "Tanggal selesai pendaftaran tidak boleh lebih awal dari tanggal mulai pendaftaran.";
+  if (errorCode === "invalid_competition_window") return "Tanggal selesai pertandingan tidak boleh lebih awal dari tanggal mulai.";
+  if (errorCode === "schema_not_ready") return "Schema database belum siap. Jalankan SQL migration terbaru di Supabase.";
+  if (errorCode === "save_failed") return "Gagal menyimpan perubahan pertandingan.";
+  if (errorCode === "duplicate_slug") return "Slug pertandingan sudah dipakai.";
+  return "Terjadi kesalahan saat memproses data pertandingan.";
 }
 
-export default async function AdminCategoryDetailPage({ params }: AdminCategoryDetailPageProps) {
+export default async function AdminCategoryDetailPage({ params, searchParams }: AdminCategoryDetailPageProps) {
   await requireAdminAccess();
   const { eventId, categoryId } = await params;
+  const query = await searchParams;
   const supabase = await createSupabaseServerClient();
+  const errorMessage = getErrorMessage(query.error);
+  const showSaved = query.saved === "1";
 
   const [{ data: event }, { data: category }] = await Promise.all([
     supabase.from("events").select("id, name, slug, city, venue").eq("id", eventId).maybeSingle(),
     supabase
       .from("event_categories")
       .select(
-        "id, event_id, name, slug, description, age_group, gender_category, participant_count, participant_unit, registration_fee, registration_open_at, registration_close_at, competition_start_at, competition_end_at, registration_bank_name_1, registration_bank_account_number_1, registration_bank_account_holder_1, registration_bank_name_2, registration_bank_account_number_2, registration_bank_account_holder_2, pairing_zone_count, pairing_cluster_count, pairing_group_count, pairing_table_count, prize_breakdown, is_published",
+        "id, event_id, name, slug, description, age_group, gender_category, participant_count, participant_unit, registration_fee, registration_open_at, registration_close_at, competition_start_at, competition_end_at, registration_bank_name_1, registration_bank_account_number_1, registration_bank_account_holder_1, registration_bank_name_2, registration_bank_account_number_2, registration_bank_account_holder_2, pairing_zone_count, pairing_cluster_count, pairing_group_count, pairing_table_count, prize_breakdown, is_published, sort_order",
       )
       .eq("id", categoryId)
       .maybeSingle(),
@@ -98,6 +123,7 @@ export default async function AdminCategoryDetailPage({ params }: AdminCategoryD
         })
         .filter((item): item is { label: string; amount: number } => item !== null)
     : [];
+  const identity = parseCategoryIdentity(categoryRow.name, categoryRow.age_group, categoryRow.gender_category);
 
   return (
     <div className="space-y-6">
@@ -143,6 +169,16 @@ export default async function AdminCategoryDetailPage({ params }: AdminCategoryD
         </div>
       </section>
 
+      {showSaved ? (
+        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
+          Data pertandingan berhasil diupdate.
+        </section>
+      ) : null}
+
+      {errorMessage ? (
+        <section className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{errorMessage}</section>
+      ) : null}
+
       <section className="rounded-2xl border border-[#e5e7eb] bg-white p-6">
         <h2 className="text-lg font-bold text-[#111827]">Data Event</h2>
         <dl className="mt-3 grid gap-3 text-sm md:grid-cols-2">
@@ -166,116 +202,74 @@ export default async function AdminCategoryDetailPage({ params }: AdminCategoryD
       </section>
 
       <section className="rounded-2xl border border-[#e5e7eb] bg-white p-6">
-        <h2 className="text-lg font-bold text-[#111827]">Data Pertandingan</h2>
-        <dl className="mt-3 grid gap-3 text-sm md:grid-cols-2">
-          <div>
-            <dt className="text-[#6b7280]">Nama Pertandingan</dt>
-            <dd className="font-semibold">{categoryRow.name}</dd>
-          </div>
-          <div>
-            <dt className="text-[#6b7280]">Slug</dt>
-            <dd className="font-semibold">{categoryRow.slug}</dd>
-          </div>
-          <div>
-            <dt className="text-[#6b7280]">Status</dt>
-            <dd className="font-semibold">{categoryRow.is_published ? "published" : "draft"}</dd>
-          </div>
-          <div>
-            <dt className="text-[#6b7280]">Batas Usia</dt>
-            <dd className="font-semibold">{categoryRow.age_group ?? "-"}</dd>
-          </div>
-          <div>
-            <dt className="text-[#6b7280]">Jenis Kelamin</dt>
-            <dd className="font-semibold">{categoryRow.gender_category ?? "-"}</dd>
-          </div>
-          <div>
-            <dt className="text-[#6b7280]">Jumlah Peserta</dt>
-            <dd className="font-semibold">
-              {categoryRow.participant_count ?? 0} {formatParticipantUnit(categoryRow.participant_unit)}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-[#6b7280]">Biaya Pendaftaran</dt>
-            <dd className="font-semibold">{formatRupiah(categoryRow.registration_fee)}</dd>
-          </div>
-          <div>
-            <dt className="text-[#6b7280]">Admin Pertandingan</dt>
-            <dd className="font-semibold">{adminCount ?? 0} admin</dd>
-          </div>
-          <div>
-            <dt className="text-[#6b7280]">Peserta Terdaftar</dt>
-            <dd className="font-semibold">{participantCount ?? 0} peserta</dd>
-          </div>
-          <div>
-            <dt className="text-[#6b7280]">Periode Pendaftaran</dt>
-            <dd className="font-semibold">
+        <h2 className="text-lg font-bold text-[#111827]">Data Pertandingan (Editable)</h2>
+        <div className="mt-4">
+          <EventCategoryForm
+            action={upsertEventCategoryAction}
+            eventId={eventRow.id}
+            submitLabel="Simpan Perubahan"
+            isEdit
+            redirectTo={`/admin/events/${eventRow.id}/categories/${categoryRow.id}`}
+            defaults={{
+              categoryId: categoryRow.id,
+              noPertandingan: identity.noPertandingan,
+              ageGroup: identity.ageGroup,
+              genderCategory: identity.genderCategory,
+              slug: categoryRow.slug,
+              description: categoryRow.description ?? "",
+              participantCount: categoryRow.participant_count,
+              participantUnit: categoryRow.participant_unit ?? "peserta",
+              registrationFee: categoryRow.registration_fee,
+              registrationBankName1: categoryRow.registration_bank_name_1 ?? "",
+              registrationBankAccountNumber1: categoryRow.registration_bank_account_number_1 ?? "",
+              registrationBankAccountHolder1: categoryRow.registration_bank_account_holder_1 ?? "",
+              registrationBankName2: categoryRow.registration_bank_name_2 ?? "",
+              registrationBankAccountNumber2: categoryRow.registration_bank_account_number_2 ?? "",
+              registrationBankAccountHolder2: categoryRow.registration_bank_account_holder_2 ?? "",
+              competitionStartDate: categoryRow.competition_start_at ? toDateInputValueId(categoryRow.competition_start_at) : "",
+              competitionEndDate: categoryRow.competition_end_at ? toDateInputValueId(categoryRow.competition_end_at) : "",
+              registrationOpenDate: categoryRow.registration_open_at ? toDateInputValueId(categoryRow.registration_open_at) : "",
+              registrationCloseDate: categoryRow.registration_close_at ? toDateInputValueId(categoryRow.registration_close_at) : "",
+              pairingZoneCount: categoryRow.pairing_zone_count ?? 0,
+              pairingClusterCount: categoryRow.pairing_cluster_count ?? 0,
+              pairingGroupCount: categoryRow.pairing_group_count ?? 0,
+              pairingTableCount: categoryRow.pairing_table_count ?? 0,
+              sortOrder: categoryRow.sort_order ?? 10,
+              isPublished: categoryRow.is_published,
+              prizes: parsedPrizes,
+            }}
+          />
+        </div>
+
+        <div className="mt-4 grid gap-2 text-sm text-[#374151] md:grid-cols-2">
+          <p>
+            <span className="text-[#6b7280]">Admin Pertandingan:</span> <strong>{adminCount ?? 0} admin</strong>
+          </p>
+          <p>
+            <span className="text-[#6b7280]">Peserta Terdaftar:</span> <strong>{participantCount ?? 0} peserta</strong>
+          </p>
+          <p>
+            <span className="text-[#6b7280]">Periode Pendaftaran:</span>{" "}
+            <strong>
               {categoryRow.registration_open_at ? formatDateId(categoryRow.registration_open_at) : "-"} -{" "}
               {categoryRow.registration_close_at ? formatDateId(categoryRow.registration_close_at) : "-"}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-[#6b7280]">Periode Pertandingan</dt>
-            <dd className="font-semibold">
+            </strong>
+          </p>
+          <p>
+            <span className="text-[#6b7280]">Periode Pertandingan:</span>{" "}
+            <strong>
               {categoryRow.competition_start_at ? formatDateId(categoryRow.competition_start_at) : "-"} -{" "}
               {categoryRow.competition_end_at ? formatDateId(categoryRow.competition_end_at) : "-"}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-[#6b7280]">Pairing</dt>
-            <dd className="font-semibold">
+            </strong>
+          </p>
+          <p className="md:col-span-2">
+            <span className="text-[#6b7280]">Pairing:</span>{" "}
+            <strong>
               Z{categoryRow.pairing_zone_count ?? 0} C{categoryRow.pairing_cluster_count ?? 0} G{categoryRow.pairing_group_count ?? 0} M
               {categoryRow.pairing_table_count ?? 0}
-            </dd>
-          </div>
-        </dl>
-
-        {categoryRow.description ? (
-          <div className="mt-4 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] p-3 text-sm text-[#374151]">{categoryRow.description}</div>
-        ) : null}
-      </section>
-
-      <section className="rounded-2xl border border-[#e5e7eb] bg-white p-6">
-        <h2 className="text-lg font-bold text-[#111827]">Data Bank Pendaftaran</h2>
-        <div className="mt-3 grid gap-3 text-sm md:grid-cols-2">
-          <div className="rounded-lg border border-[#e5e7eb] p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#6b7280]">Bank 1</p>
-            <p className="mt-1 font-semibold">{categoryRow.registration_bank_name_1 || "-"}</p>
-            <p className="text-[#374151]">{categoryRow.registration_bank_account_number_1 || "-"}</p>
-            <p className="text-[#374151]">{categoryRow.registration_bank_account_holder_1 || "-"}</p>
-          </div>
-          <div className="rounded-lg border border-[#e5e7eb] p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#6b7280]">Bank 2</p>
-            <p className="mt-1 font-semibold">{categoryRow.registration_bank_name_2 || "-"}</p>
-            <p className="text-[#374151]">{categoryRow.registration_bank_account_number_2 || "-"}</p>
-            <p className="text-[#374151]">{categoryRow.registration_bank_account_holder_2 || "-"}</p>
-          </div>
+            </strong>
+          </p>
         </div>
-      </section>
-
-      <section className="rounded-2xl border border-[#e5e7eb] bg-white p-6">
-        <h2 className="text-lg font-bold text-[#111827]">Hadiah</h2>
-        {parsedPrizes.length > 0 ? (
-          <div className="mt-3 overflow-hidden rounded-lg border border-[#e5e7eb]">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-[#f9fafb] text-xs uppercase tracking-wide text-[#6b7280]">
-                <tr>
-                  <th className="px-4 py-3">Posisi</th>
-                  <th className="px-4 py-3">Nominal</th>
-                </tr>
-              </thead>
-              <tbody>
-                {parsedPrizes.map((item) => (
-                  <tr key={item.label} className="border-t border-[#f1f5f9]">
-                    <td className="px-4 py-3 font-semibold">{item.label}</td>
-                    <td className="px-4 py-3">{formatRupiah(item.amount)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="mt-3 text-sm text-[#6b7280]">Belum ada data hadiah.</p>
-        )}
       </section>
     </div>
   );

@@ -42,6 +42,7 @@ type EventCategoryFormProps = {
   submitLabel: string;
   defaults: EventCategoryFormDefaults;
   isEdit?: boolean;
+  redirectTo?: string;
 };
 
 const MATCH_OPTIONS = [
@@ -66,7 +67,7 @@ function toSlug(value: string) {
     .replace(/^-|-$/g, "");
 }
 
-export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEdit = false }: EventCategoryFormProps) {
+export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEdit = false, redirectTo }: EventCategoryFormProps) {
   const initialMatchName = defaults.noPertandingan || MATCH_OPTIONS[0];
   const initialAgeGroup = defaults.ageGroup || AGE_OPTIONS[0];
   const initialGenderCategory = defaults.genderCategory || GENDER_OPTIONS[0];
@@ -137,6 +138,7 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
       <input type="hidden" name="gender_category" value={genderCategory} />
       <input type="hidden" name="participant_unit" value={defaults.participantUnit || "peserta"} />
       <input type="hidden" name="prize_breakdown_json" value={serializedPrizeBreakdown} />
+      {redirectTo ? <input type="hidden" name="redirect_to" value={redirectTo} /> : null}
 
       <h3 className="text-base font-bold text-[#111827]">A. Identitas Pertandingan</h3>
 

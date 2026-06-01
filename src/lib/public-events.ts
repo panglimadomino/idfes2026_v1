@@ -29,6 +29,12 @@ export type PublicEventCategory = {
   participant_count: number | null;
   participant_unit: string | null;
   registration_fee: number | null;
+  registration_bank_name_1: string | null;
+  registration_bank_account_number_1: string | null;
+  registration_bank_account_holder_1: string | null;
+  registration_bank_name_2: string | null;
+  registration_bank_account_number_2: string | null;
+  registration_bank_account_holder_2: string | null;
   registration_open_at: string | null;
   registration_close_at: string | null;
   competition_start_at: string | null;
@@ -142,9 +148,9 @@ export async function getPublishedCategoriesByEventId(eventId: string): Promise<
   try {
     const supabase = createSupabaseClient();
     const selectWithFee =
-      "id, name, slug, sort_order, description, age_group, gender_category, participant_count, participant_unit, registration_fee, registration_open_at, registration_close_at, competition_start_at, competition_end_at, pairing_zone_count, pairing_cluster_count, pairing_group_count, pairing_table_count, prize_breakdown";
+      "id, name, slug, sort_order, description, age_group, gender_category, participant_count, participant_unit, registration_fee, registration_bank_name_1, registration_bank_account_number_1, registration_bank_account_holder_1, registration_bank_name_2, registration_bank_account_number_2, registration_bank_account_holder_2, registration_open_at, registration_close_at, competition_start_at, competition_end_at, pairing_zone_count, pairing_cluster_count, pairing_group_count, pairing_table_count, prize_breakdown";
     const selectWithoutFee =
-      "id, name, slug, sort_order, description, age_group, gender_category, participant_count, participant_unit, registration_open_at, registration_close_at, competition_start_at, competition_end_at, pairing_zone_count, pairing_cluster_count, pairing_group_count, pairing_table_count, prize_breakdown";
+      "id, name, slug, sort_order, description, age_group, gender_category, participant_count, participant_unit, registration_bank_name_1, registration_bank_account_number_1, registration_bank_account_holder_1, registration_bank_name_2, registration_bank_account_number_2, registration_bank_account_holder_2, registration_open_at, registration_close_at, competition_start_at, competition_end_at, pairing_zone_count, pairing_cluster_count, pairing_group_count, pairing_table_count, prize_breakdown";
 
     const query = supabase
       .from("event_categories")
@@ -182,6 +188,16 @@ export async function getPublishedCategoriesByEventId(eventId: string): Promise<
       participant_count: typeof item.participant_count === "number" ? item.participant_count : null,
       participant_unit: typeof item.participant_unit === "string" ? item.participant_unit : null,
       registration_fee: typeof item.registration_fee === "number" ? item.registration_fee : null,
+      registration_bank_name_1: typeof item.registration_bank_name_1 === "string" ? item.registration_bank_name_1 : null,
+      registration_bank_account_number_1:
+        typeof item.registration_bank_account_number_1 === "string" ? item.registration_bank_account_number_1 : null,
+      registration_bank_account_holder_1:
+        typeof item.registration_bank_account_holder_1 === "string" ? item.registration_bank_account_holder_1 : null,
+      registration_bank_name_2: typeof item.registration_bank_name_2 === "string" ? item.registration_bank_name_2 : null,
+      registration_bank_account_number_2:
+        typeof item.registration_bank_account_number_2 === "string" ? item.registration_bank_account_number_2 : null,
+      registration_bank_account_holder_2:
+        typeof item.registration_bank_account_holder_2 === "string" ? item.registration_bank_account_holder_2 : null,
       registration_open_at: typeof item.registration_open_at === "string" ? item.registration_open_at : null,
       registration_close_at: typeof item.registration_close_at === "string" ? item.registration_close_at : null,
       competition_start_at: typeof item.competition_start_at === "string" ? item.competition_start_at : null,
@@ -204,6 +220,25 @@ export async function getPublishedCategoriesByEventId(eventId: string): Promise<
   } catch {
     return [];
   }
+}
+
+export async function getActivePublishedEventWithCategories() {
+  const events = await getPublishedEvents(50);
+  if (events.length === 0) return null;
+
+  const now = Date.now();
+  const sortedByDate = [...events].sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime());
+  const ongoing = sortedByDate.find((event) => {
+    const start = new Date(event.start_at).getTime();
+    const end = new Date(event.end_at).getTime();
+    return start <= now && now <= end;
+  });
+
+  const upcoming = sortedByDate.find((event) => new Date(event.start_at).getTime() > now);
+  const featured = events.find((event) => event.is_featured);
+  const selected = ongoing ?? upcoming ?? featured ?? sortedByDate[0];
+  const categories = await getPublishedCategoriesByEventId(selected.id);
+  return { event: selected, categories };
 }
 
 export async function getPublishedNewsByEventId(eventId: string): Promise<PublicEventNews[]> {

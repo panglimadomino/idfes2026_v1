@@ -20,6 +20,65 @@ function normalizeSlug(value: string) {
     .replace(/^-|-$/g, "");
 }
 
+function buildAdminRedirectUrl(basePath: string, query: Record<string, string>) {
+  const params = new URLSearchParams(query);
+  return `${basePath}?${params.toString()}`;
+}
+
+function normalizeCategoryRedirectBase(raw: string, eventId: string) {
+  const fallback = buildAdminRedirectUrl("/admin/events/schedule", { manage_event_id: eventId });
+  if (!raw) return fallback;
+
+  try {
+    const url = new URL(raw, "http://localhost");
+    if (!url.pathname.startsWith("/admin/events/")) return fallback;
+    return `${url.pathname}${url.search}`;
+  } catch {
+    return fallback;
+  }
+}
+
+function appendQuery(urlWithOptionalQuery: string, query: Record<string, string>) {
+  const [path, rawQuery = ""] = urlWithOptionalQuery.split("?");
+  const params = new URLSearchParams(rawQuery);
+  for (const [key, value] of Object.entries(query)) {
+    params.set(key, value);
+  }
+  return `${path}?${params.toString()}`;
+}
+
+function isAllowedAdminEmail(email: string) {
+  const normalized = email.trim().toLowerCase();
+  return normalized.endsWith("@gmail.com") || normalized.endsWith("@googlemail.com");
+}
+
+async function findUserByEmail(email: string) {
+  const adminClient = createSupabaseAdminClient();
+  const normalizedEmail = email.trim().toLowerCase();
+  let page = 1;
+  const perPage = 200;
+
+  for (let guard = 0; guard < 20; guard += 1) {
+    const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage });
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const users = data.users ?? [];
+    const found = users.find((item) => (item.email ?? "").toLowerCase() === normalizedEmail);
+    if (found) {
+      return found;
+    }
+
+    if (users.length < perPage) {
+      break;
+    }
+    page += 1;
+  }
+
+  return null;
+}
+
 export async function signOutAdminAction() {
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut();
@@ -476,8 +535,9 @@ export async function updateEventScheduleAction(formData: FormData) {
 export async function upsertEventCategoryAction(formData: FormData) {
   const access = await requireAdminAccess();
   const eventId = String(formData.get("event_id") ?? "").trim();
+  const redirectBase = normalizeCategoryRedirectBase(String(formData.get("redirect_to") ?? "").trim(), eventId);
   if (!access.isSuperAdmin) {
-    redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=unauthorized`);
+    redirect(appendQuery(redirectBase, { error: "unauthorized" }));
   }
 
   const categoryId = String(formData.get("category_id") ?? "").trim();
@@ -508,7 +568,7 @@ export async function upsertEventCategoryAction(formData: FormData) {
   const isPublished = formData.get("is_published") === "on";
 
   if (!eventId || !name || !ageGroupRaw || !genderCategoryRaw || !competitionStartDate || !competitionEndDate || !participantCountRaw) {
-    redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=required_fields`);
+    redirect(appendQuery(redirectBase, { error: "required_fields" }));
   }
 
   const allowedAgeGroups = new Set(["Bebas", "U-25", "O+25"]);
@@ -516,16 +576,16 @@ export async function upsertEventCategoryAction(formData: FormData) {
   const ageGroup = allowedAgeGroups.has(ageGroupRaw) ? ageGroupRaw : null;
   const genderCategory = allowedGenderCategories.has(genderCategoryRaw) ? genderCategoryRaw : null;
   if (!ageGroup || !genderCategory) {
-    redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=invalid_identity_config`);
+    redirect(appendQuery(redirectBase, { error: "invalid_identity_config" }));
   }
 
   const sortOrder = Number.parseInt(sortOrderRaw || "0", 10);
   if (Number.isNaN(sortOrder)) {
-    redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=invalid_sort_order`);
+    redirect(appendQuery(redirectBase, { error: "invalid_sort_order" }));
   }
   const participantCount = Number.parseInt(participantCountRaw || "0", 10);
   if (Number.isNaN(participantCount) || participantCount <= 0) {
-    redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=invalid_participant_count`);
+    redirect(appendQuery(redirectBase, { error: "invalid_participant_count" }));
   }
 
   const allowedParticipantUnits = new Set(["pasang", "athlet", "peserta"]);
@@ -533,7 +593,7 @@ export async function upsertEventCategoryAction(formData: FormData) {
   const registrationFeeDigits = registrationFeeRaw.replace(/\D/g, "");
   const registrationFee = registrationFeeDigits ? Number.parseInt(registrationFeeDigits, 10) : null;
   if (registrationFee !== null && (Number.isNaN(registrationFee) || registrationFee < 0)) {
-    redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=invalid_registration_fee`);
+    redirect(appendQuery(redirectBase, { error: "invalid_registration_fee" }));
   }
 
   const pairingZoneCount = Number.parseInt(pairingZoneCountRaw || "0", 10);
@@ -545,20 +605,20 @@ export async function upsertEventCategoryAction(formData: FormData) {
       (value) => Number.isNaN(value) || value < 0,
     )
   ) {
-    redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=invalid_pairing_config`);
+    redirect(appendQuery(redirectBase, { error: "invalid_pairing_config" }));
   }
 
   const slug = normalizeSlug(slugInput || name);
   if (!slug) {
-    redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=invalid_slug`);
+    redirect(appendQuery(redirectBase, { error: "invalid_slug" }));
   }
 
   if (registrationOpenDate && registrationCloseDate && registrationCloseDate < registrationOpenDate) {
-    redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=invalid_registration_window`);
+    redirect(appendQuery(redirectBase, { error: "invalid_registration_window" }));
   }
 
   if (competitionStartDate && competitionEndDate && competitionEndDate < competitionStartDate) {
-    redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=invalid_competition_window`);
+    redirect(appendQuery(redirectBase, { error: "invalid_competition_window" }));
   }
 
   let prizeBreakdown: Array<{ label: string; amount: number }> = [];
@@ -575,7 +635,7 @@ export async function upsertEventCategoryAction(formData: FormData) {
         .filter((item): item is { label: string; amount: number } => item !== null);
     }
   } catch {
-    redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=invalid_prize_config`);
+    redirect(appendQuery(redirectBase, { error: "invalid_prize_config" }));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -619,12 +679,12 @@ export async function upsertEventCategoryAction(formData: FormData) {
 
   if (error) {
     if (error.message.toLowerCase().includes("column") && error.message.toLowerCase().includes("event_categories")) {
-      redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=schema_not_ready`);
+      redirect(appendQuery(redirectBase, { error: "schema_not_ready" }));
     }
     if (error.message.toLowerCase().includes("duplicate key")) {
-      redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=duplicate_slug`);
+      redirect(appendQuery(redirectBase, { error: "duplicate_slug" }));
     }
-    redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&error=save_failed`);
+    redirect(appendQuery(redirectBase, { error: "save_failed" }));
   }
 
   revalidatePath("/admin");
@@ -632,7 +692,7 @@ export async function upsertEventCategoryAction(formData: FormData) {
   revalidatePath("/admin/events/categories");
   revalidatePath("/event");
   revalidatePath("/events");
-  redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&saved=1`);
+  redirect(appendQuery(redirectBase, { saved: "1" }));
 }
 
 export async function deleteEventCategoryAction(formData: FormData) {
@@ -659,4 +719,176 @@ export async function deleteEventCategoryAction(formData: FormData) {
   revalidatePath("/event");
   revalidatePath("/events");
   redirect(`/admin/events/schedule?manage_event_id=${encodeURIComponent(eventId)}&deleted=1`);
+}
+
+function buildAdminManagementRedirect(formData: FormData) {
+  const eventId = String(formData.get("event_id") ?? "").trim();
+  const categoryId = String(formData.get("category_id") ?? "").trim();
+  const params = new URLSearchParams();
+  if (eventId) params.set("event_id", eventId);
+  if (categoryId) params.set("category_id", categoryId);
+  return {
+    url: `/admin/admins?${params.toString()}`,
+    eventId,
+    categoryId,
+  };
+}
+
+export async function registerCategoryAdminAction(formData: FormData) {
+  const access = await requireAdminAccess();
+  const { url, eventId, categoryId } = buildAdminManagementRedirect(formData);
+  if (!access.isSuperAdmin) {
+    redirect(appendQuery(url, { error: "unauthorized" }));
+  }
+
+  const email = String(formData.get("email") ?? "")
+    .trim()
+    .toLowerCase();
+  const canVerifyRegistration = formData.get("can_verify_registration") === "on";
+  const canScoreRr = formData.get("can_score_rr") === "on";
+  const canScoreSe = formData.get("can_score_se") === "on";
+
+  if (!email || !eventId || !categoryId) {
+    redirect(appendQuery(url, { error: "required_fields" }));
+  }
+
+  if (!isAllowedAdminEmail(email)) {
+    redirect(appendQuery(url, { error: "email_must_be_google" }));
+  }
+
+  if (!canVerifyRegistration && !canScoreRr && !canScoreSe) {
+    redirect(appendQuery(url, { error: "permission_required" }));
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: categoryCheck, error: categoryError } = await supabase
+    .from("event_categories")
+    .select("id, event_id")
+    .eq("id", categoryId)
+    .eq("event_id", eventId)
+    .maybeSingle();
+
+  if (categoryError || !categoryCheck) {
+    redirect(appendQuery(url, { error: "invalid_event_category" }));
+  }
+
+  const adminClient = createSupabaseAdminClient();
+
+  let user = await findUserByEmail(email);
+  if (!user) {
+    const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email);
+    if (inviteError) {
+      redirect(appendQuery(url, { error: "invite_failed" }));
+    }
+    user = inviteData.user ?? null;
+  }
+
+  if (!user?.id) {
+    redirect(appendQuery(url, { error: "user_not_found_after_invite" }));
+  }
+
+  const userId = user.id;
+
+  const { error: roleError } = await supabase.from("user_roles").upsert(
+    {
+      user_id: userId,
+      role: "admin_category",
+    },
+    { onConflict: "user_id,role" },
+  );
+  if (roleError) {
+    redirect(appendQuery(url, { error: "save_role_failed" }));
+  }
+
+  const { error: accessError } = await supabase.from("admin_category_access").upsert(
+    {
+      user_id: userId,
+      event_id: eventId,
+      category_id: categoryId,
+      can_verify_registration: canVerifyRegistration,
+      can_score_rr: canScoreRr,
+      can_score_se: canScoreSe,
+      is_active: true,
+    },
+    { onConflict: "user_id,event_id,category_id" },
+  );
+
+  if (accessError) {
+    redirect(appendQuery(url, { error: "save_access_failed" }));
+  }
+
+  revalidatePath("/admin/admins");
+  revalidatePath("/admin/events");
+  revalidatePath(`/admin/events/${eventId}`);
+  revalidatePath(`/admin/events/${eventId}/categories/${categoryId}`);
+  redirect(appendQuery(url, { invited: "1" }));
+}
+
+export async function sendCategoryAdminResetPasswordAction(formData: FormData) {
+  const access = await requireAdminAccess();
+  const { url } = buildAdminManagementRedirect(formData);
+  if (!access.isSuperAdmin) {
+    redirect(appendQuery(url, { error: "unauthorized" }));
+  }
+
+  const email = String(formData.get("email") ?? "")
+    .trim()
+    .toLowerCase();
+  if (!email) {
+    redirect(appendQuery(url, { error: "required_fields" }));
+  }
+
+  const resetRedirectTo =
+    String(formData.get("reset_redirect_to") ?? "").trim() || process.env.NEXT_PUBLIC_RESET_PASSWORD_REDIRECT_URL || "http://localhost:3000/login";
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: resetRedirectTo,
+  });
+
+  if (error) {
+    redirect(appendQuery(url, { error: "reset_password_failed" }));
+  }
+
+  redirect(appendQuery(url, { reset_sent: "1" }));
+}
+
+export async function deleteCategoryAdminAccessAction(formData: FormData) {
+  const access = await requireAdminAccess();
+  const { url } = buildAdminManagementRedirect(formData);
+  if (!access.isSuperAdmin) {
+    redirect(appendQuery(url, { error: "unauthorized" }));
+  }
+
+  const accessId = String(formData.get("access_id") ?? "").trim();
+  const userId = String(formData.get("user_id") ?? "").trim();
+  if (!accessId || !userId) {
+    redirect(appendQuery(url, { error: "required_fields" }));
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error: deleteAccessError } = await supabase.from("admin_category_access").delete().eq("id", accessId).eq("user_id", userId);
+  if (deleteAccessError) {
+    redirect(appendQuery(url, { error: "delete_access_failed" }));
+  }
+
+  const { count, error: countError } = await supabase
+    .from("admin_category_access")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("is_active", true);
+
+  if (!countError && (count ?? 0) === 0) {
+    const { error: deleteRoleError } = await supabase
+      .from("user_roles")
+      .delete()
+      .eq("user_id", userId)
+      .eq("role", "admin_category");
+    if (deleteRoleError) {
+      redirect(appendQuery(url, { error: "delete_role_failed" }));
+    }
+  }
+
+  revalidatePath("/admin/admins");
+  redirect(appendQuery(url, { deleted: "1" }));
 }

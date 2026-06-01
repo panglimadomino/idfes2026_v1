@@ -63,7 +63,7 @@ export default async function EventDetailPage({ params }: Props) {
       <section className="space-y-4">
         <div className="flex items-end justify-between">
           <h2 className="font-title text-4xl uppercase text-[var(--ink-strong)]">Kategori</h2>
-          <Link href="/form-pendaftaran" className="text-sm font-bold text-[var(--ink-soft)]">
+          <Link href={`/form-pendaftaran?event=${event.slug}`} className="text-sm font-bold text-[var(--ink-soft)]">
             Buka Form Pendaftaran
           </Link>
         </div>

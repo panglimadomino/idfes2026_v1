@@ -17,7 +17,7 @@ export default async function CategoryDetailPage({ params }: Props) {
   const { data: category } = await supabase
     .from("event_categories")
     .select(
-      "id, name, slug, description, age_group, gender_category, participant_count, participant_unit, registration_open_at, registration_close_at, competition_start_at, competition_end_at, pairing_zone_count, pairing_cluster_count, pairing_group_count, pairing_table_count, prize_breakdown",
+      "id, name, slug, description, age_group, gender_category, participant_count, participant_unit, registration_fee, registration_bank_name_1, registration_bank_account_number_1, registration_bank_account_holder_1, registration_bank_name_2, registration_bank_account_number_2, registration_bank_account_holder_2, registration_open_at, registration_close_at, competition_start_at, competition_end_at, pairing_zone_count, pairing_cluster_count, pairing_group_count, pairing_table_count, prize_breakdown",
     )
     .eq("event_id", event.id)
     .eq("slug", categorySlug)
@@ -58,7 +58,7 @@ export default async function CategoryDetailPage({ params }: Props) {
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
           <Link
-            href="/form-pendaftaran"
+            href={`/form-pendaftaran?event=${event.slug}&category=${category.slug}`}
             className="rounded-full bg-[var(--ink-strong)] px-5 py-2 text-sm font-bold text-[var(--surface-card)]"
           >
             Daftar Kategori Ini
@@ -105,8 +105,49 @@ export default async function CategoryDetailPage({ params }: Props) {
               <dd>{formatWindow(category.registration_open_at, category.registration_close_at)}</dd>
             </div>
             <div className="flex justify-between gap-2">
+              <dt>Biaya Pendaftaran</dt>
+              <dd>{typeof category.registration_fee === "number" ? formatRupiah(category.registration_fee) : "-"}</dd>
+            </div>
+            <div className="flex justify-between gap-2">
               <dt>Pertandingan</dt>
               <dd>{formatWindow(category.competition_start_at, category.competition_end_at)}</dd>
+            </div>
+          </dl>
+        </article>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-2">
+        <article className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-5">
+          <h2 className="text-sm font-bold uppercase text-[var(--ink-soft)]">Bank Pendaftaran 1</h2>
+          <dl className="mt-2 space-y-2 text-sm text-[var(--ink-soft)]">
+            <div className="flex justify-between gap-2">
+              <dt>Nama Bank</dt>
+              <dd>{category.registration_bank_name_1 ?? "-"}</dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt>No Rekening</dt>
+              <dd>{category.registration_bank_account_number_1 ?? "-"}</dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt>Atas Nama</dt>
+              <dd>{category.registration_bank_account_holder_1 ?? "-"}</dd>
+            </div>
+          </dl>
+        </article>
+        <article className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-5">
+          <h2 className="text-sm font-bold uppercase text-[var(--ink-soft)]">Bank Pendaftaran 2</h2>
+          <dl className="mt-2 space-y-2 text-sm text-[var(--ink-soft)]">
+            <div className="flex justify-between gap-2">
+              <dt>Nama Bank</dt>
+              <dd>{category.registration_bank_name_2 ?? "-"}</dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt>No Rekening</dt>
+              <dd>{category.registration_bank_account_number_2 ?? "-"}</dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt>Atas Nama</dt>
+              <dd>{category.registration_bank_account_holder_2 ?? "-"}</dd>
             </div>
           </dl>
         </article>
