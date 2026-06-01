@@ -182,6 +182,65 @@ export async function upsertCmsSectionAction(formData: FormData) {
   revalidatePath("/admin/cms/pages");
 }
 
+export async function updateHeroSectionAction(formData: FormData) {
+  const access = await requireAdminAccess();
+  if (!access.isSuperAdmin) {
+    throw new Error("Hanya super admin yang dapat mengubah Hero Section.");
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const { data: homePage, error: pageError } = await supabase.from("cms_pages").select("id").eq("page_key", "home").maybeSingle();
+  if (pageError || !homePage) {
+    throw new Error(pageError?.message ?? "Halaman home tidak ditemukan.");
+  }
+
+  const { data: existingSection, error: sectionError } = await supabase
+    .from("cms_page_sections")
+    .select("id, title, subtitle, content, sort_order")
+    .eq("page_id", homePage.id)
+    .eq("section_key", "hero")
+    .maybeSingle();
+  if (sectionError) {
+    throw new Error(sectionError.message);
+  }
+
+  const rawContent = (existingSection?.content ?? {}) as Record<string, unknown>;
+  const content: Record<string, unknown> = {
+    ...rawContent,
+    hero_date_text: String(formData.get("hero_date_text") ?? "").trim(),
+    hero_headline: String(formData.get("hero_headline") ?? "").trim(),
+    hero_subtitle: String(formData.get("hero_subtitle") ?? "").trim(),
+    hero_category_name: String(formData.get("hero_category_name") ?? "").trim(),
+    hero_category_date: String(formData.get("hero_category_date") ?? "").trim(),
+    cta_label: String(formData.get("cta_label") ?? "").trim(),
+    hero_footer_text: String(formData.get("hero_footer_text") ?? "").trim(),
+    cta_target: rawContent.cta_target ?? "active_event",
+    background_asset_slot: rawContent.background_asset_slot ?? "hero_background",
+  };
+
+  const { error: upsertError } = await supabase.from("cms_page_sections").upsert(
+    {
+      page_id: homePage.id,
+      section_key: "hero",
+      section_type: "hero",
+      title: existingSection?.title ?? "Hero Section",
+      subtitle: existingSection?.subtitle ?? null,
+      content,
+      is_visible: true,
+      sort_order: existingSection?.sort_order ?? 10,
+      updated_by: access.userId,
+      created_by: access.userId,
+    },
+    { onConflict: "page_id,section_key" },
+  );
+  if (upsertError) {
+    throw new Error(upsertError.message);
+  }
+
+  revalidatePath("/admin/cms/pages");
+  revalidatePath("/");
+}
+
 export async function upsertCmsBlockAction(formData: FormData) {
   const access = await requireAdminAccess();
   if (!access.isSuperAdmin) {
@@ -288,6 +347,10 @@ export async function uploadCmsMediaAction(formData: FormData) {
   }
 
   revalidatePath("/admin/cms/media");
+  revalidatePath("/admin/cms/pages");
+  if (usageType === "hero_background") {
+    revalidatePath("/");
+  }
 }
 
 export async function deleteCmsMediaAction(formData: FormData) {

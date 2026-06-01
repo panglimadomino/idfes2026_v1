@@ -2,38 +2,114 @@ import Link from "next/link";
 import { getActiveEvent } from "@/lib/site-data";
 import { formatDateId } from "@/lib/date-id";
 import { extractProvinceLabel, getPublishedEvents, getPublishedNews } from "@/lib/public-events";
+import { createSupabaseClient } from "@/lib/supabase/client";
+
+type HeroCmsContent = {
+  hero_date_text: string;
+  hero_headline: string;
+  hero_subtitle: string;
+  hero_category_name: string;
+  hero_category_date: string;
+  cta_label: string;
+  hero_footer_text: string;
+};
+
+const HERO_FALLBACK: HeroCmsContent = {
+  hero_date_text: "22-25 October 2026",
+  hero_headline: "A city that plays. A festival that celebrates.",
+  hero_subtitle: "Public Registration is now open.",
+  hero_category_name: "Open Team",
+  hero_category_date: "5 May 2026",
+  cta_label: "Register Now",
+  hero_footer_text: "Stay tuned to our official channels for more updates.",
+};
+
+function getHeroString(content: Record<string, unknown> | null | undefined, key: keyof HeroCmsContent) {
+  const value = content?.[key];
+  if (typeof value !== "string") return HERO_FALLBACK[key];
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : HERO_FALLBACK[key];
+}
+
+async function getHeroCmsData(heroCategoryFallback: string) {
+  try {
+    const supabase = createSupabaseClient();
+    const [{ data: homePage }, { data: heroBackground }] = await Promise.all([
+      supabase.from("cms_pages").select("id").eq("page_key", "home").maybeSingle(),
+      supabase
+        .from("cms_media_assets")
+        .select("public_url")
+        .eq("usage_type", "hero_background")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+    if (!homePage?.id) {
+      return {
+        ...HERO_FALLBACK,
+        hero_category_name: heroCategoryFallback || HERO_FALLBACK.hero_category_name,
+        background_url: "/images/hero-surabaya-domino-2026.webp",
+      };
+    }
+
+    const { data: heroSection } = await supabase
+      .from("cms_page_sections")
+      .select("content")
+      .eq("page_id", homePage.id)
+      .eq("section_key", "hero")
+      .maybeSingle();
+
+    const content = (heroSection?.content ?? null) as Record<string, unknown> | null;
+    return {
+      hero_date_text: getHeroString(content, "hero_date_text"),
+      hero_headline: getHeroString(content, "hero_headline"),
+      hero_subtitle: getHeroString(content, "hero_subtitle"),
+      hero_category_name: getHeroString(content, "hero_category_name") || heroCategoryFallback,
+      hero_category_date: getHeroString(content, "hero_category_date"),
+      cta_label: getHeroString(content, "cta_label"),
+      hero_footer_text: getHeroString(content, "hero_footer_text"),
+      background_url: heroBackground?.public_url || "/images/hero-surabaya-domino-2026.webp",
+    };
+  } catch {
+    return {
+      ...HERO_FALLBACK,
+      hero_category_name: heroCategoryFallback || HERO_FALLBACK.hero_category_name,
+      background_url: "/images/hero-surabaya-domino-2026.webp",
+    };
+  }
+}
 
 export default async function HomePage() {
   const activeEvent = getActiveEvent();
   const heroCategory = activeEvent.categories[0];
   const publishedEvents = await getPublishedEvents(8);
   const newsItems = await getPublishedNews(16);
+  const heroCms = await getHeroCmsData(heroCategory?.name ?? "");
 
   return (
     <div>
       <section
         className="relative min-h-[82vh] border-b border-black/20 bg-cover bg-center text-white"
         style={{
-          backgroundImage:
-            "linear-gradient(rgba(0,0,0,.68), rgba(0,0,0,.68)), url('/images/hero-surabaya-domino-2026.webp')",
+          backgroundImage: `linear-gradient(rgba(0,0,0,.68), rgba(0,0,0,.68)), url('${heroCms.background_url}')`,
         }}
       >
         <div className="site-frame flex min-h-[82vh] items-center justify-center px-6 py-20 text-center">
           <div className="max-w-3xl space-y-4">
-            <p className="text-5xl font-black leading-none sm:text-6xl">22-25 October 2026</p>
-            <h1 className="text-4xl font-black leading-tight sm:text-6xl">
-              A city that plays. A festival that celebrates.
-            </h1>
-            <p className="text-xl">Public Registration is now open.</p>
-            <p className="text-3xl font-black">{heroCategory?.name ?? "Public Registration"}</p>
-            <p className="text-3xl font-semibold">5 May 2026</p>
+            <p className="text-5xl font-black leading-none sm:text-6xl">{heroCms.hero_date_text}</p>
+            <h1 className="text-4xl font-black leading-tight sm:text-6xl">{heroCms.hero_headline}</h1>
+            <p className="text-xl">{heroCms.hero_subtitle}</p>
+            <p className="text-3xl font-black">{heroCms.hero_category_name || heroCategory?.name || "Public Registration"}</p>
+            <p className="text-3xl font-semibold">{heroCms.hero_category_date}</p>
             <Link
               href="/form-pendaftaran"
               className="mt-2 inline-flex bg-white px-10 py-4 text-2xl font-bold text-black transition hover:bg-zinc-100"
             >
-              Register Now
+              {heroCms.cta_label}
             </Link>
-            <p className="pt-4 text-2xl">Stay tuned to our official channels for more updates.</p>
+            <p className="pt-4 text-2xl">{heroCms.hero_footer_text}</p>
           </div>
         </div>
       </section>
