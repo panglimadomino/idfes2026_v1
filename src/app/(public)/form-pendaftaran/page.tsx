@@ -63,7 +63,7 @@ export default async function RegistrationFormPage({ searchParams }: Registratio
       {event ? (
         <section className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-6">
           <h2 className="text-lg font-bold text-[var(--ink-strong)]">Event Aktif: {event.name}</h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-4 grid grid-cols-1 gap-3">
             {categories.map((category) => (
               <div key={category.id} className="rounded-xl border border-[var(--line-soft)] p-4">
                 <p className="text-sm font-bold text-[var(--ink-strong)]">{category.name}</p>
@@ -92,7 +92,7 @@ export default async function RegistrationFormPage({ searchParams }: Registratio
       ) : null}
 
       <form
-        className="grid gap-4 rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-6 md:grid-cols-2"
+        className="grid grid-cols-1 gap-4 rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-6"
         encType="multipart/form-data"
         method="post"
         action="/form-pendaftaran/submit"
@@ -143,7 +143,7 @@ export default async function RegistrationFormPage({ searchParams }: Registratio
           />
         </label>
 
-        <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)] md:col-span-2">
+        <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)]">
           Social Media (opsional)
           <input
             name="social_media"
@@ -274,7 +274,7 @@ export default async function RegistrationFormPage({ searchParams }: Registratio
           </>
         ) : null}
 
-        <div className="md:col-span-2">
+        <div>
           <button type="submit" className="rounded-full bg-[var(--ink-strong)] px-6 py-3 text-sm font-bold text-[var(--surface-card)]">
             Kirim Pendaftaran
           </button>
@@ -282,7 +282,7 @@ export default async function RegistrationFormPage({ searchParams }: Registratio
       </form>
 
       {selectedCategory ? (
-        <section className="grid gap-4 rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-6 md:grid-cols-2">
+        <section className="grid gap-4 rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-6">
           <article>
             <h3 className="text-sm font-bold uppercase text-[var(--ink-soft)]">Ringkasan Kategori</h3>
             <dl className="mt-2 space-y-2 text-sm text-[var(--ink-soft)]">
