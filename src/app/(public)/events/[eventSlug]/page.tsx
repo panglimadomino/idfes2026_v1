@@ -59,12 +59,7 @@ export default async function EventDetailPage({ params }: Props) {
       </section>
 
       <section className="space-y-4">
-        <div className="flex items-end justify-between">
-          <h2 className="font-title text-4xl uppercase text-[var(--ink-strong)]">Kategori</h2>
-          <Link href={`/form-pendaftaran?event=${event.slug}`} className="text-sm font-bold text-[var(--ink-soft)]">
-            Buka Form Pendaftaran
-          </Link>
-        </div>
+        <h2 className="font-title text-4xl uppercase text-[var(--ink-strong)]">Kategori</h2>
         {categories.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {categories.map((category) => {
