@@ -23,6 +23,7 @@ type CmsSectionRow = {
   section_key: string;
   section_type: string;
   title: string | null;
+  subtitle: string | null;
   content: Record<string, unknown> | null;
   is_visible: boolean;
   sort_order: number;
@@ -87,7 +88,7 @@ export default async function AdminCmsPagesPage({ searchParams }: AdminCmsPagesP
     supabase.from("cms_pages").select("id, page_key, title, slug, is_published, updated_at").order("updated_at", { ascending: false }),
     supabase
       .from("cms_page_sections")
-      .select("id, page_id, section_key, section_type, title, content, is_visible, sort_order, updated_at")
+      .select("id, page_id, section_key, section_type, title, subtitle, content, is_visible, sort_order, updated_at")
       .order("page_id", { ascending: true })
       .order("sort_order", { ascending: true }),
     supabase
