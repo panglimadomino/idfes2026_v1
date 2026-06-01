@@ -14,6 +14,7 @@ export type AdminSidebarItem = {
 export type AdminSidebarSection = {
   title: string;
   items: AdminSidebarItem[];
+  collapsible?: boolean;
 };
 
 type AdminSidebarNavProps = {
@@ -123,7 +124,7 @@ function SidebarItemRow({
             aria-label={isOpen ? `Sembunyikan submenu ${item.label}` : `Tampilkan submenu ${item.label}`}
             className="rounded px-2 py-1 text-xs font-semibold text-[#4b5563] hover:text-[#111827]"
           >
-            {isOpen ? "v" : ">"}
+            {isOpen ? "▾" : "▸"}
           </button>
         ) : null}
       </div>
@@ -196,6 +197,26 @@ export function AdminSidebarNav({ sections, onItemClick }: AdminSidebarNavProps)
   return (
     <nav className="mt-8 space-y-6">
       {sections.map((section) => {
+        if (section.collapsible === false) {
+          return (
+            <div key={section.title || section.items.map((item) => item.href).join("|")} className="space-y-1">
+              {section.items.map((item) => (
+                <SidebarItemRow
+                  key={item.href}
+                  item={item}
+                  pathname={pathname}
+                  searchParams={searchParams}
+                  onItemClick={onItemClick}
+                  depth={0}
+                  isOpen={isOpenByKey(item.href)}
+                  getIsOpen={isOpenByKey}
+                  onToggle={handleToggle}
+                />
+              ))}
+            </div>
+          );
+        }
+
         const sectionOpen = isSectionOpen(section);
         const sectionActive = hasActiveItemInSection(pathname, searchParams, section);
 
@@ -210,7 +231,7 @@ export function AdminSidebarNav({ sections, onItemClick }: AdminSidebarNavProps)
               aria-label={sectionOpen ? `Sembunyikan submenu ${section.title}` : `Tampilkan submenu ${section.title}`}
             >
               <span>{section.title}</span>
-              <span className="text-sm normal-case">{sectionOpen ? "v" : ">"}</span>
+              <span className="text-sm normal-case">{sectionOpen ? "▾" : "▸"}</span>
             </button>
 
             {sectionOpen ? (

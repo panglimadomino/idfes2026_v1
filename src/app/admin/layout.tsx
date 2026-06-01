@@ -24,68 +24,9 @@ type CmsPageSidebarRow = {
   slug: string;
 };
 
-type CmsSectionSidebarRow = {
-  id: string;
-  page_id: string;
-  section_key: string;
-  title: string | null;
-  sort_order: number | null;
-  is_visible: boolean;
-};
-
-function toTitleCaseLabel(value: string) {
-  return value
-    .replace(/[_-]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function toSectionLabel(section: CmsSectionSidebarRow) {
-  if (section.title?.trim()) return section.title.trim();
-  if (section.section_key === "hero") return "Hero Section";
-  return toTitleCaseLabel(section.section_key);
-}
-
-function buildPageSectionItems(page: CmsPageSidebarRow | null, cmsSections: CmsSectionSidebarRow[], fallbackPageKey: string): AdminSidebarItem[] {
-  if (!page) {
-    return [
-      {
-        href: `/admin/cms/pages?page_key=${fallbackPageKey}&section_key=hero`,
-        label: "Hero Section",
-        exact: true,
-      },
-    ];
-  }
-
-  const pageSections = cmsSections
-    .filter((section) => section.page_id === page.id)
-    .sort((a, b) => {
-      const left = a.sort_order ?? 0;
-      const right = b.sort_order ?? 0;
-      if (left !== right) return left - right;
-      return a.section_key.localeCompare(b.section_key, "id");
-    });
-
-  if (pageSections.length === 0) {
-    return [
-      {
-        href: `/admin/cms/pages?page_key=${page.page_key}&section_key=hero`,
-        label: "Hero Section",
-        exact: true,
-      },
-    ];
-  }
-
-  return pageSections.map((section) => ({
-    href: `/admin/cms/pages?page_key=${page.page_key}&section_key=${section.section_key}`,
-    label: toSectionLabel(section),
-    exact: true,
-  }));
-}
-
-function buildPublicContentTreeItems(cmsPages: CmsPageSidebarRow[], cmsSections: CmsSectionSidebarRow[]): AdminSidebarSection[] {
-  const homePage = cmsPages.find((page) => page.page_key === "home" || page.slug === "/") ?? null;
+function buildPublicContentTreeItems(cmsPages: CmsPageSidebarRow[]): AdminSidebarSection[] {
+  const homePageKey = cmsPages.find((page) => page.page_key === "home" || page.slug === "/")?.page_key ?? "home";
+  const homeBase = `/admin/cms/pages?page_key=${homePageKey}`;
 
   return [
     {
@@ -96,11 +37,27 @@ function buildPublicContentTreeItems(cmsPages: CmsPageSidebarRow[], cmsSections:
           label: "Header",
           exact: true,
         },
+        {
+          href: `${homeBase}&section_key=hero`,
+          label: "Hero Section",
+          exact: true,
+        },
+        {
+          href: `${homeBase}&section_key=category_cards`,
+          label: "Card Event ID Fes 2026",
+          exact: true,
+        },
+        {
+          href: `${homeBase}&section_key=news_updates`,
+          label: "Berita",
+          exact: true,
+        },
+        {
+          href: `${homeBase}&section_key=partner_banner`,
+          label: "Footer",
+          exact: true,
+        },
       ],
-    },
-    {
-      title: "Home",
-      items: buildPageSectionItems(homePage, cmsSections, "home"),
     },
   ];
 }
@@ -198,28 +155,22 @@ function buildEventTreeItems(events: EventSidebarRow[], categories: CategorySide
 async function buildAdminMenu(isSuperAdmin: boolean): Promise<AdminSidebarSection[]> {
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: events }, { data: categories }, { data: cmsPages }, { data: cmsSections }] = await Promise.all([
+  const [{ data: events }, { data: categories }, { data: cmsPages }] = await Promise.all([
     supabase.from("events").select("id, name, start_at").order("start_at", { ascending: false }).limit(200),
     supabase.from("event_categories").select("id, event_id, name, sort_order").limit(1000),
     supabase.from("cms_pages").select("id, page_key, title, slug"),
-    supabase
-      .from("cms_page_sections")
-      .select("id, page_id, section_key, title, sort_order, is_visible"),
   ]);
 
   const eventRows = ((events ?? []) as EventSidebarRow[]).filter((row) => !!row.id && !!row.name);
   const categoryRows = ((categories ?? []) as CategorySidebarRow[]).filter((row) => !!row.id && !!row.event_id && !!row.name);
   const cmsPageRows = ((cmsPages ?? []) as CmsPageSidebarRow[]).filter((row) => !!row.id && !!row.page_key);
-  const cmsSectionRows = ((cmsSections ?? []) as CmsSectionSidebarRow[]).filter(
-    (row) => !!row.id && !!row.page_id && !!row.section_key,
-  );
-
-  const publicSections = buildPublicContentTreeItems(cmsPageRows, cmsSectionRows);
+  const publicSections = buildPublicContentTreeItems(cmsPageRows);
 
   return [
     {
       title: "Dashboard",
       items: [{ href: "/admin", label: "Dashboard", exact: true }],
+      collapsible: false,
     },
     ...publicSections,
     {
