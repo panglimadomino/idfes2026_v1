@@ -53,6 +53,10 @@ const MATCH_OPTIONS = [
   "Amatir",
   "Beregu",
 ] as const;
+const CATEGORY_TYPE_OPTIONS = [
+  { label: "Tunggal", value: "athlet" },
+  { label: "Ganda", value: "pasang" },
+] as const;
 const AGE_OPTIONS = ["Bebas", "U-25", "O+25"] as const;
 const GENDER_OPTIONS = ["Putra", "Putri", "Campuran"] as const;
 
@@ -80,6 +84,10 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
   const [noPertandingan, setNoPertandingan] = useState(initialMatchName);
   const [ageGroup, setAgeGroup] = useState(initialAgeGroup);
   const [genderCategory, setGenderCategory] = useState(initialGenderCategory);
+  const [participantUnit, setParticipantUnit] = useState(() => {
+    if (defaults.participantUnit === "pasang") return "pasang";
+    return "athlet";
+  });
   const [slug, setSlug] = useState(defaults.slug || toSlug(initialMatchName));
   const [participantCount, setParticipantCount] = useState(
     defaults.participantCount !== null && defaults.participantCount !== undefined ? String(defaults.participantCount) : "",
@@ -136,7 +144,7 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
       <input type="hidden" name="slug" value={slug} />
       <input type="hidden" name="age_group" value={ageGroup} />
       <input type="hidden" name="gender_category" value={genderCategory} />
-      <input type="hidden" name="participant_unit" value={defaults.participantUnit || "peserta"} />
+      <input type="hidden" name="participant_unit" value={participantUnit} />
       <input type="hidden" name="prize_breakdown_json" value={serializedPrizeBreakdown} />
       {redirectTo ? <input type="hidden" name="redirect_to" value={redirectTo} /> : null}
 
@@ -157,6 +165,22 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
           {matchOptions.map((option) => (
             <option key={option} value={option}>
               {option}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="text-sm font-semibold text-[#374151]">
+        Kategori
+        <select
+          required
+          value={participantUnit}
+          onChange={(event) => setParticipantUnit(event.target.value as "athlet" | "pasang")}
+          className="mt-1 w-full rounded-lg border border-[#d1d5db] px-3 py-2"
+        >
+          {CATEGORY_TYPE_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
             </option>
           ))}
         </select>
@@ -213,7 +237,7 @@ export function EventCategoryForm({ action, eventId, submitLabel, defaults, isEd
       </label>
 
       <label className="text-sm font-semibold text-[#374151]">
-        Jumlah Peserta
+        {`Jumlah Peserta (${participantUnit === "pasang" ? "Pasang" : "Athlet"})`}
         <input
           required
           name="participant_count"
