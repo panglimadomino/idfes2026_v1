@@ -139,36 +139,6 @@ export default async function AdminCategoryDetailPage({ params, searchParams }: 
         </div>
       </section>
 
-      <section className="rounded-2xl border border-[#e5e7eb] bg-white p-6">
-        <div className="flex flex-wrap gap-2">
-          <span className="rounded-lg bg-[#111827] px-3 py-2 text-sm font-semibold text-white">Data Pertandingan</span>
-          <Link
-            href={`/admin/admins?event_id=${eventRow.id}&category_id=${categoryRow.id}`}
-            className="rounded-lg border border-[#d1d5db] px-3 py-2 text-sm font-semibold text-[#111827]"
-          >
-            Admin Pertandingan
-          </Link>
-          <Link
-            href={`/admin/registrations?event_id=${eventRow.id}&category_id=${categoryRow.id}`}
-            className="rounded-lg border border-[#d1d5db] px-3 py-2 text-sm font-semibold text-[#111827]"
-          >
-            Daftar Peserta (Terdaftar)
-          </Link>
-          <Link
-            href={`/admin/events/${eventRow.id}/categories/${categoryRow.id}/pairing/rr`}
-            className="rounded-lg border border-[#d1d5db] px-3 py-2 text-sm font-semibold text-[#111827]"
-          >
-            RR Pairing
-          </Link>
-          <Link
-            href={`/admin/events/${eventRow.id}/categories/${categoryRow.id}/pairing/se`}
-            className="rounded-lg border border-[#d1d5db] px-3 py-2 text-sm font-semibold text-[#111827]"
-          >
-            SE Pairing
-          </Link>
-        </div>
-      </section>
-
       {showSaved ? (
         <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
           Data pertandingan berhasil diupdate.

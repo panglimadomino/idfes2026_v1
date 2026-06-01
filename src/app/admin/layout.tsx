@@ -143,13 +143,7 @@ function buildEventTreeItems(events: EventSidebarRow[], categories: CategorySide
     });
   }
 
-  return [
-    {
-      href: "/admin/events",
-      label: "ID FES 2026",
-      children: eventChildren,
-    },
-  ];
+  return eventChildren;
 }
 
 async function buildAdminMenu(isSuperAdmin: boolean): Promise<AdminSidebarSection[]> {
