@@ -303,12 +303,7 @@ export default async function AdminCmsPagesPage({ searchParams }: AdminCmsPagesP
               <input type="hidden" name="section_key" value={selectedSectionKey} />
               <input type="hidden" name="section_type" value={simpleSectionType} />
               <input type="hidden" name="sort_order" value={String(selectedSection?.sort_order ?? 0)} />
-              <textarea
-                name="content_json"
-                defaultValue={simpleSectionContentJson}
-                rows={4}
-                className="font-mono rounded-lg border border-[#d1d5db] px-3 py-2 text-xs"
-              />
+              <input type="hidden" name="content_json" value={simpleSectionContentJson} />
               <input
                 name="title"
                 defaultValue={simpleSectionTitle}
@@ -321,6 +316,9 @@ export default async function AdminCmsPagesPage({ searchParams }: AdminCmsPagesP
                 placeholder={`Subjudul ${simpleSectionName} (opsional)`}
                 className="rounded-lg border border-[#d1d5db] px-3 py-2"
               />
+              <p className="text-xs text-[#6b7280]">
+                Pengaturan teknis section disimpan otomatis oleh sistem.
+              </p>
               <label className="flex items-center gap-2 rounded-lg border border-[#d1d5db] px-3 py-2 text-sm">
                 <input type="checkbox" name="is_visible" defaultChecked={selectedSection?.is_visible ?? true} />
                 Visible
