@@ -6,7 +6,6 @@ import {
   extractProvinceLabel,
   getPublishedCategoriesByEventId,
   getPublishedEventBySlug,
-  getPublishedNewsByEventId,
 } from "@/lib/public-events";
 
 type Props = {
@@ -47,7 +46,6 @@ export default async function EventDetailPage({ params }: Props) {
   const event = await getPublishedEventBySlug(eventSlug);
   if (!event) notFound();
   const categories = await getPublishedCategoriesByEventId(event.id);
-  const news = await getPublishedNewsByEventId(event.id);
 
   return (
     <div className="site-frame space-y-8 px-4 pb-16 pt-8 sm:px-6 lg:px-8">
@@ -144,26 +142,6 @@ export default async function EventDetailPage({ params }: Props) {
         )}
       </section>
 
-      <section className="space-y-3">
-        <h2 className="font-title text-4xl uppercase text-[var(--ink-strong)]">Berita Event</h2>
-        {news.length > 0 ? (
-          <div className="grid gap-4 lg:grid-cols-3">
-            {news.map((item) => (
-              <article key={item.id} className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-5">
-                <p className="text-xs font-bold uppercase text-[var(--ink-soft)]">
-                  {item.published_at ? formatDateId(item.published_at) : "-"}
-                </p>
-                <h3 className="mt-2 text-lg font-bold text-[var(--ink-strong)]">{item.title}</h3>
-                <p className="mt-2 text-sm text-[var(--ink-soft)]">{item.summary ?? "-"}</p>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-5 text-sm text-[var(--ink-soft)]">
-            Belum ada berita event yang dipublish.
-          </div>
-        )}
-      </section>
     </div>
   );
 }
