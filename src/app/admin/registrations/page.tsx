@@ -1,4 +1,5 @@
 import { requireAdminAccess } from "@/lib/auth/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type RegistrationRow = {
@@ -18,9 +19,29 @@ type RegistrationRow = {
   submitted_at: string;
 };
 
+type RegistrationRowWithPreview = RegistrationRow & {
+  payment_proof_signed_url: string | null;
+  payment_proof_kind: "image" | "pdf" | "other" | null;
+};
+
 type AdminRegistrationsPageProps = {
   searchParams: Promise<{ event_id?: string; category_id?: string }>;
 };
+
+const PAYMENT_BUCKET = "registration-payment-proofs";
+const SIGNED_URL_TTL_SECONDS = 60 * 30;
+
+function detectPaymentProofKind(path: string | null) {
+  if (!path) return null;
+  const normalized = path.toLowerCase();
+  if (normalized.endsWith(".png") || normalized.endsWith(".jpg") || normalized.endsWith(".jpeg") || normalized.endsWith(".webp")) {
+    return "image" as const;
+  }
+  if (normalized.endsWith(".pdf")) {
+    return "pdf" as const;
+  }
+  return "other" as const;
+}
 
 export default async function AdminRegistrationsPage({ searchParams }: AdminRegistrationsPageProps) {
   await requireAdminAccess();
@@ -41,6 +62,32 @@ export default async function AdminRegistrationsPage({ searchParams }: AdminRegi
   const { data, error } = await query;
 
   const rows = (data ?? []) as RegistrationRow[];
+  const adminSupabase = createSupabaseAdminClient();
+  const signedUrlEntries = await Promise.all(
+    rows.map(async (registration) => {
+      const objectPath = registration.payment_proof_url;
+      if (!objectPath) {
+        return [registration.id, null] as const;
+      }
+
+      const { data: signedUrlData, error: signedUrlError } = await adminSupabase.storage
+        .from(PAYMENT_BUCKET)
+        .createSignedUrl(objectPath, SIGNED_URL_TTL_SECONDS);
+
+      if (signedUrlError || !signedUrlData?.signedUrl) {
+        return [registration.id, null] as const;
+      }
+
+      return [registration.id, signedUrlData.signedUrl] as const;
+    }),
+  );
+
+  const signedUrlMap = new Map<string, string | null>(signedUrlEntries);
+  const rowsWithPreview: RegistrationRowWithPreview[] = rows.map((registration) => ({
+    ...registration,
+    payment_proof_signed_url: signedUrlMap.get(registration.id) ?? null,
+    payment_proof_kind: detectPaymentProofKind(registration.payment_proof_url),
+  }));
 
   return (
     <div className="space-y-6">
@@ -82,7 +129,7 @@ export default async function AdminRegistrationsPage({ searchParams }: AdminRegi
               </tr>
             </thead>
             <tbody>
-              {rows.map((registration) => (
+              {rowsWithPreview.map((registration) => (
                 <tr key={registration.id} className="border-t border-[#f1f5f9]">
                   <td className="px-4 py-3 font-semibold">{registration.registration_code}</td>
                   <td className="px-4 py-3">{registration.registration_no ?? "-"}</td>
@@ -93,8 +140,29 @@ export default async function AdminRegistrationsPage({ searchParams }: AdminRegi
                   <td className="px-4 py-3">{registration.category_id}</td>
                   <td className="px-4 py-3">{registration.whatsapp}</td>
                   <td className="px-4 py-3">
-                    {registration.payment_proof_url ? (
-                      <span className="break-all text-xs">{registration.payment_proof_url}</span>
+                    {registration.payment_proof_signed_url ? (
+                      <div className="space-y-2">
+                        {registration.payment_proof_kind === "image" ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={registration.payment_proof_signed_url}
+                            alt={`Bukti bayar ${registration.registration_code}`}
+                            className="h-20 w-20 rounded border border-[#e5e7eb] object-cover"
+                          />
+                        ) : registration.payment_proof_kind === "pdf" ? (
+                          <div className="inline-flex h-20 w-20 items-center justify-center rounded border border-[#e5e7eb] bg-[#f9fafb] text-xs font-semibold text-[#374151]">
+                            PDF
+                          </div>
+                        ) : null}
+                        <a
+                          href={registration.payment_proof_signed_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex rounded-lg border border-[#d1d5db] px-3 py-1 text-xs font-semibold text-[#111827] hover:bg-[#f9fafb]"
+                        >
+                          Buka File
+                        </a>
+                      </div>
                     ) : (
                       "-"
                     )}
@@ -104,7 +172,7 @@ export default async function AdminRegistrationsPage({ searchParams }: AdminRegi
                   <td className="px-4 py-3">{new Date(registration.submitted_at).toLocaleString("id-ID")}</td>
                 </tr>
               ))}
-              {rows.length === 0 ? (
+              {rowsWithPreview.length === 0 ? (
                 <tr>
                   <td className="px-4 py-4 text-[#6b7280]" colSpan={12}>
                     Belum ada data registrasi.
