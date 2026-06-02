@@ -1,9 +1,7 @@
-import {
-  type PublicEventCategory,
-  getActivePublishedEventWithCategories,
-  getPublishedCategoriesByEventId,
-  getPublishedEventBySlug,
-} from "@/lib/public-events";
+import { RegistrationForm } from "./_components/registration-form";
+import { getActivePublishedEventWithCategories, getPublishedCategoriesByEventId, getPublishedEventBySlug } from "@/lib/public-events";
+import type { PublicEventCategory } from "@/lib/public-events";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { formatDateId } from "@/lib/date-id";
 
 type RegistrationFormPageProps = {
@@ -22,11 +20,35 @@ function formatParticipant(category: PublicEventCategory) {
   return `${category.participant_count} ${unit}`;
 }
 
-function formatRupiah(value: number) {
-  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(value);
-}
+async function getGarduOptions(eventId: string | null) {
+  if (!eventId) return [];
 
-const GENDER_OPTIONS = ["Putra", "Putri", "Campuran"] as const;
+  try {
+    const supabase = createSupabaseAdminClient();
+    const { data, error } = await supabase
+      .from("registrations")
+      .select("club_name, team_name, gardu_input, gardu_final")
+      .eq("event_id", eventId)
+      .order("submitted_at", { ascending: false })
+      .limit(500);
+
+    if (error || !data) return [];
+
+    const uniqueNames = new Set<string>();
+    for (const item of data as Array<Record<string, unknown>>) {
+      for (const key of ["gardu_final", "gardu_input", "club_name", "team_name"] as const) {
+        const value = item[key];
+        if (typeof value !== "string") continue;
+        const normalized = value.trim();
+        if (normalized) uniqueNames.add(normalized);
+      }
+    }
+
+    return [...uniqueNames].sort((left, right) => left.localeCompare(right, "id")).slice(0, 200);
+  } catch {
+    return [];
+  }
+}
 
 export default async function RegistrationFormPage({ searchParams }: RegistrationFormPageProps) {
   const params = await searchParams;
@@ -46,10 +68,9 @@ export default async function RegistrationFormPage({ searchParams }: Registratio
     categories.find((item) => item.slug === params.category) ??
     categories[0] ??
     null;
-
-  const isPairCategory = selectedCategory?.participant_unit === "pasang";
   const statusMessage = params.message ? decodeURIComponent(params.message) : "";
   const statusType = params.status === "ok" ? "ok" : params.status === "error" ? "error" : null;
+  const garduOptions = await getGarduOptions(event?.id ?? null);
 
   return (
     <div className="site-frame space-y-8 px-4 pb-16 pt-8 sm:px-6 lg:px-8">
@@ -91,240 +112,12 @@ export default async function RegistrationFormPage({ searchParams }: Registratio
         </section>
       ) : null}
 
-      <form
-        className="grid grid-cols-1 gap-4 rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-6"
-        encType="multipart/form-data"
-        method="post"
-        action="/form-pendaftaran/submit"
-      >
-        <input type="hidden" name="event_slug" value={event?.slug ?? ""} />
-
-        <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)]">
-          Pilih Kategori
-          <select
-            name="category_slug"
-            defaultValue={selectedCategory?.slug ?? ""}
-            className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]"
-          >
-            {categories.map((category) => (
-              <option key={category.id} value={category.slug}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)]">
-          Email (OTP)
-          <input
-            name="email"
-            type="email"
-            placeholder="nama@email.com"
-            required
-            className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]"
-          />
-        </label>
-
-        <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)]">
-          Nama Tim / Pasangan
-          <input
-            name="team_name"
-            placeholder={isPairCategory ? "Contoh: Tim Jatim A" : "Contoh: Nama peserta"}
-            className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]"
-          />
-        </label>
-
-        <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)]">
-          Kabupaten/Kota
-          <input
-            name="kabupaten_kota"
-            placeholder="Contoh: Kota Surabaya"
-            className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]"
-          />
-        </label>
-
-        <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)]">
-          Social Media (opsional)
-          <input
-            name="social_media"
-            placeholder="Contoh: @username_ig / tiktok / youtube"
-            className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]"
-          />
-        </label>
-
-        <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)]">
-          {isPairCategory ? "Nama Atlet 1" : "Nama Peserta"}
-          <input
-            name="athlete_1_name"
-            required
-            className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]"
-          />
-        </label>
-
-        <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)]">
-          {isPairCategory ? "Nomor WhatsApp Atlet 1" : "Nomor WhatsApp Peserta"}
-          <input
-            name="athlete_1_whatsapp"
-            required
-            className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]"
-          />
-        </label>
-
-        <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)]">
-          Jenis Kelamin Atlet 1
-          <select
-            name="athlete_1_gender"
-            defaultValue=""
-            required
-            className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]"
-          >
-            <option value="" disabled>
-              Pilih jenis kelamin
-            </option>
-            {GENDER_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)]">
-          Tanggal Lahir Atlet 1
-          <input
-            name="athlete_1_date_of_birth"
-            type="date"
-            required
-            className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]"
-          />
-        </label>
-
-        <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)]">
-          {isPairCategory ? "Foto Atlet 1" : "Foto Peserta"}
-          <input
-            name="athlete_1_photo"
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            required
-            className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)] file:mr-3 file:rounded-md file:border-0 file:bg-[var(--ink-strong)] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-[var(--surface-card)]"
-          />
-          <p className="text-xs font-normal text-[var(--ink-soft)]">Format: JPG/PNG/WEBP.</p>
-        </label>
-
-        {isPairCategory ? (
-          <>
-            <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)]">
-              Nama Atlet 2
-              <input
-                name="athlete_2_name"
-                required
-                className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]"
-              />
-            </label>
-
-            <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)]">
-              Nomor WhatsApp Atlet 2
-              <input
-                name="athlete_2_whatsapp"
-                required
-                className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]"
-              />
-            </label>
-
-            <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)]">
-              Jenis Kelamin Atlet 2
-              <select
-                name="athlete_2_gender"
-                defaultValue=""
-                required
-                className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]"
-              >
-                <option value="" disabled>
-                  Pilih jenis kelamin
-                </option>
-                {GENDER_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)]">
-              Tanggal Lahir Atlet 2
-              <input
-                name="athlete_2_date_of_birth"
-                type="date"
-                required
-                className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)]"
-              />
-            </label>
-
-            <label className="space-y-2 text-sm font-semibold text-[var(--ink-soft)]">
-              Foto Atlet 2
-              <input
-                name="athlete_2_photo"
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                required
-                className="w-full rounded-lg border border-[var(--line-soft)] bg-white px-3 py-2 text-[var(--ink-strong)] file:mr-3 file:rounded-md file:border-0 file:bg-[var(--ink-strong)] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-[var(--surface-card)]"
-              />
-              <p className="text-xs font-normal text-[var(--ink-soft)]">Format: JPG/PNG/WEBP.</p>
-            </label>
-          </>
-        ) : null}
-
-        <div>
-          <button type="submit" className="rounded-full bg-[var(--ink-strong)] px-6 py-3 text-sm font-bold text-[var(--surface-card)]">
-            Kirim Pendaftaran
-          </button>
-        </div>
-      </form>
-
-      {selectedCategory ? (
-        <section className="grid gap-4 rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-6">
-          <article>
-            <h3 className="text-sm font-bold uppercase text-[var(--ink-soft)]">Ringkasan Kategori</h3>
-            <dl className="mt-2 space-y-2 text-sm text-[var(--ink-soft)]">
-              <div className="flex justify-between gap-2">
-                <dt>Nama</dt>
-                <dd>{selectedCategory.name}</dd>
-              </div>
-              <div className="flex justify-between gap-2">
-                <dt>Biaya Pendaftaran</dt>
-                <dd>
-                  {typeof selectedCategory.registration_fee === "number"
-                    ? formatRupiah(selectedCategory.registration_fee)
-                    : "-"}
-                </dd>
-              </div>
-              <div className="flex justify-between gap-2">
-                <dt>Pendaftaran</dt>
-                <dd>{formatWindow(selectedCategory.registration_open_at, selectedCategory.registration_close_at)}</dd>
-              </div>
-              <div className="flex justify-between gap-2">
-                <dt>Pertandingan</dt>
-                <dd>{formatWindow(selectedCategory.competition_start_at, selectedCategory.competition_end_at)}</dd>
-              </div>
-            </dl>
-          </article>
-          <article>
-            <h3 className="text-sm font-bold uppercase text-[var(--ink-soft)]">Rekening Pembayaran</h3>
-            <div className="mt-2 space-y-3 text-sm text-[var(--ink-soft)]">
-              <div className="rounded-xl border border-[var(--line-soft)] p-3">
-                <p className="font-semibold text-[var(--ink-strong)]">{selectedCategory.registration_bank_name_1 ?? "Bank 1"}</p>
-                <p>No Rek: {selectedCategory.registration_bank_account_number_1 ?? "-"}</p>
-                <p>Atas Nama: {selectedCategory.registration_bank_account_holder_1 ?? "-"}</p>
-              </div>
-              <div className="rounded-xl border border-[var(--line-soft)] p-3">
-                <p className="font-semibold text-[var(--ink-strong)]">{selectedCategory.registration_bank_name_2 ?? "Bank 2"}</p>
-                <p>No Rek: {selectedCategory.registration_bank_account_number_2 ?? "-"}</p>
-                <p>Atas Nama: {selectedCategory.registration_bank_account_holder_2 ?? "-"}</p>
-              </div>
-            </div>
-          </article>
-        </section>
-      ) : null}
+      <RegistrationForm
+        event={event}
+        categories={categories}
+        defaultCategorySlug={selectedCategory?.slug ?? ""}
+        garduOptions={garduOptions}
+      />
     </div>
   );
 }

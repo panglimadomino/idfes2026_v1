@@ -4,10 +4,15 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 type RegistrationRow = {
   id: string;
   registration_code: string;
+  registration_no: string | null;
   event_id: string;
   category_id: string;
   full_name: string;
+  team_name: string | null;
+  club_name: string | null;
+  kabupaten_kota: string | null;
   whatsapp: string;
+  payment_proof_url: string | null;
   payment_status: string;
   verification_status: string;
   submitted_at: string;
@@ -26,7 +31,7 @@ export default async function AdminRegistrationsPage({ searchParams }: AdminRegi
 
   let query = supabase
     .from("registrations")
-    .select("id, registration_code, event_id, category_id, full_name, whatsapp, payment_status, verification_status, submitted_at")
+    .select("id, registration_code, registration_no, event_id, category_id, full_name, team_name, club_name, kabupaten_kota, whatsapp, payment_proof_url, payment_status, verification_status, submitted_at")
     .order("submitted_at", { ascending: false })
     .limit(100);
 
@@ -63,10 +68,14 @@ export default async function AdminRegistrationsPage({ searchParams }: AdminRegi
             <thead className="bg-[#f9fafb] text-xs uppercase tracking-wide text-[#6b7280]">
               <tr>
                 <th className="px-4 py-3">Kode</th>
+                <th className="px-4 py-3">No Reg</th>
                 <th className="px-4 py-3">Nama</th>
+                <th className="px-4 py-3">Gardu/Club</th>
+                <th className="px-4 py-3">Kab/Kota</th>
                 <th className="px-4 py-3">Event</th>
                 <th className="px-4 py-3">Pertandingan</th>
                 <th className="px-4 py-3">WhatsApp</th>
+                <th className="px-4 py-3">Bukti Bayar</th>
                 <th className="px-4 py-3">Payment</th>
                 <th className="px-4 py-3">Verifikasi</th>
                 <th className="px-4 py-3">Tanggal</th>
@@ -76,10 +85,20 @@ export default async function AdminRegistrationsPage({ searchParams }: AdminRegi
               {rows.map((registration) => (
                 <tr key={registration.id} className="border-t border-[#f1f5f9]">
                   <td className="px-4 py-3 font-semibold">{registration.registration_code}</td>
+                  <td className="px-4 py-3">{registration.registration_no ?? "-"}</td>
                   <td className="px-4 py-3">{registration.full_name}</td>
+                  <td className="px-4 py-3">{registration.team_name ?? registration.club_name ?? "-"}</td>
+                  <td className="px-4 py-3">{registration.kabupaten_kota ?? "-"}</td>
                   <td className="px-4 py-3">{registration.event_id}</td>
                   <td className="px-4 py-3">{registration.category_id}</td>
                   <td className="px-4 py-3">{registration.whatsapp}</td>
+                  <td className="px-4 py-3">
+                    {registration.payment_proof_url ? (
+                      <span className="break-all text-xs">{registration.payment_proof_url}</span>
+                    ) : (
+                      "-"
+                    )}
+                  </td>
                   <td className="px-4 py-3">{registration.payment_status}</td>
                   <td className="px-4 py-3">{registration.verification_status}</td>
                   <td className="px-4 py-3">{new Date(registration.submitted_at).toLocaleString("id-ID")}</td>
@@ -87,7 +106,7 @@ export default async function AdminRegistrationsPage({ searchParams }: AdminRegi
               ))}
               {rows.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-4 text-[#6b7280]" colSpan={8}>
+                  <td className="px-4 py-4 text-[#6b7280]" colSpan={12}>
                     Belum ada data registrasi.
                   </td>
                 </tr>
