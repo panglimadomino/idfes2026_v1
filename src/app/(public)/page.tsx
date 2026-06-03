@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getActiveEvent } from "@/lib/site-data";
 import { formatDateId } from "@/lib/date-id";
-import { extractProvinceLabel, getPublishedEvents, getPublishedNews } from "@/lib/public-events";
+import { extractProvinceLabel, getPublishedEventsWithCategories, getPublishedNews, type PublicEventCardCategory } from "@/lib/public-events";
 import { createSupabaseClient } from "@/lib/supabase/client";
 
 type HeroCmsContent = {
@@ -81,10 +81,16 @@ async function getHeroCmsData(heroCategoryFallback: string) {
   }
 }
 
+function formatParticipantCount(category: PublicEventCardCategory) {
+  if (!category.participant_count || category.participant_count <= 0) return "-";
+  const unit = category.participant_unit === "pasang" ? "pasang" : category.participant_unit === "athlet" ? "atlet" : "peserta";
+  return `${category.participant_count} ${unit}`;
+}
+
 export default async function HomePage() {
   const activeEvent = getActiveEvent();
   const heroCategory = activeEvent.categories[0];
-  const publishedEvents = await getPublishedEvents(8);
+  const publishedEvents = await getPublishedEventsWithCategories(8);
   const newsItems = await getPublishedNews(16);
   const heroCms = await getHeroCmsData(heroCategory?.name ?? "");
 
@@ -144,14 +150,37 @@ export default async function HomePage() {
                   <p className="text-xs font-bold uppercase tracking-wide text-[var(--ink-soft)]">
                     {extractProvinceLabel(event.city, event.name)}
                   </p>
-                  <h3 className="mt-2 text-2xl font-bold text-[var(--ink-strong)]">{event.name}</h3>
-                  <p className="mt-2 text-sm text-[var(--ink-soft)]">
-                    {formatDateId(event.start_at)} - {formatDateId(event.end_at)}
-                  </p>
-                  <p className="mt-2 line-clamp-3 text-sm text-[var(--ink-soft)]">
-                    {event.description?.trim() || "Informasi event akan segera diperbarui."}
-                  </p>
-                  <p className="mt-1 text-sm text-[var(--ink-soft)]">{event.city ?? "-"}</p>
+                  <div className="mt-4 space-y-3">
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-soft)]">Provinsi</p>
+                      <h3 className="mt-1 text-2xl font-bold text-[var(--ink-strong)]">{extractProvinceLabel(event.city, event.name)}</h3>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-soft)]">Nama Event</p>
+                      <p className="mt-1 text-lg font-semibold text-[var(--ink-strong)]">{event.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-soft)]">Tanggal Start &amp; Selesai</p>
+                      <p className="mt-1 text-sm text-[var(--ink-soft)]">
+                        {formatDateId(event.start_at)} - {formatDateId(event.end_at)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-soft)]">Kategori Pertandingan</p>
+                      {event.categories.length > 0 ? (
+                        <ul className="mt-2 space-y-1 text-sm text-[var(--ink-soft)]">
+                          {event.categories.map((category) => (
+                            <li key={category.id} className="flex items-start justify-between gap-3 border-b border-[var(--line-soft)] pb-1 last:border-b-0">
+                              <span className="flex-1 text-[var(--ink-strong)]">{category.name}</span>
+                              <span className="whitespace-nowrap font-medium">{formatParticipantCount(category)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-1 text-sm text-[var(--ink-soft)]">Belum ada kategori published.</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 <div className="mt-6">
                   <Link

@@ -13,6 +13,18 @@ export type PublicEvent = {
   banner_url: string | null;
 };
 
+export type PublicEventCardCategory = {
+  id: string;
+  name: string;
+  participant_count: number | null;
+  participant_unit: string | null;
+  sort_order: number | null;
+};
+
+export type PublicEventWithCategories = PublicEvent & {
+  categories: PublicEventCardCategory[];
+};
+
 export type EventMenuItem = {
   href: string;
   label: string;
@@ -113,6 +125,49 @@ export async function getPublishedEvents(limit = 50): Promise<PublicEvent[]> {
     return eventRows.map((event) => ({
       ...event,
       banner_url: bannerByEventId[event.id] ?? null,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function getPublishedEventsWithCategories(limit = 50): Promise<PublicEventWithCategories[]> {
+  try {
+    const events = await getPublishedEvents(limit);
+    if (events.length === 0) return [];
+
+    const supabase = createSupabaseClient();
+    const eventIds = events.map((event) => event.id);
+    const { data, error } = await supabase
+      .from("event_categories")
+      .select("id, event_id, name, participant_count, participant_unit, sort_order")
+      .in("event_id", eventIds)
+      .eq("is_published", true)
+      .order("event_id", { ascending: true })
+      .order("sort_order", { ascending: true })
+      .limit(500);
+
+    if (error || !data) {
+      return events.map((event) => ({ ...event, categories: [] }));
+    }
+
+    const categoriesByEventId: Record<string, PublicEventCardCategory[]> = {};
+    for (const row of data as Array<Record<string, unknown>>) {
+      const eventId = typeof row.event_id === "string" ? row.event_id : "";
+      if (!eventId) continue;
+      if (!categoriesByEventId[eventId]) categoriesByEventId[eventId] = [];
+      categoriesByEventId[eventId].push({
+        id: String(row.id ?? ""),
+        name: String(row.name ?? ""),
+        participant_count: typeof row.participant_count === "number" ? row.participant_count : null,
+        participant_unit: typeof row.participant_unit === "string" ? row.participant_unit : null,
+        sort_order: typeof row.sort_order === "number" ? row.sort_order : null,
+      });
+    }
+
+    return events.map((event) => ({
+      ...event,
+      categories: categoriesByEventId[event.id] ?? [],
     }));
   } catch {
     return [];
